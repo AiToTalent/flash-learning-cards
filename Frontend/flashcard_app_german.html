@@ -268,8 +268,9 @@
 
 
         // --- Configuration ---
-        const BACKEND_URL = 'http://localhost:3001/api/generate';
-
+        // const BACKEND_URL = 'http://localhost:3001/api/generate'; // für lokale Tests
+        const BACKEND_URL = '/api/generate'; // für Produktion auf Render
+        
         // --- State ---
         let cards = [];
         let currentCardIndex = 0;
