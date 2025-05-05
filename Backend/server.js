@@ -339,7 +339,7 @@ app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // Bei Aufruf der Startseite automatisch flashcard_app_german.html liefern
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'flashcard_app_german.html'));
+  res.sendFile(path.join(__dirname, '..', 'Frontend', 'flashcard_app_german.html'));
 });
 
 // --- Server Startup ---
