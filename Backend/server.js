@@ -337,9 +337,9 @@ const path = require('path');
 // Statischen Ordner für das Frontend bereitstellen
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// Bei Aufruf der Startseite automatisch index.html liefern
+// Bei Aufruf der Startseite automatisch flashcard_app_german.html liefern
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'flashcard_app_german.html'));
 });
 
 // --- Server Startup ---
