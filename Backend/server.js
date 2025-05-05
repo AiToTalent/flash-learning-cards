@@ -331,6 +331,17 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
     }
 });
 
+
+const path = require('path');
+
+// Statischen Ordner für das Frontend bereitstellen
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
+
+// Bei Aufruf der Startseite automatisch index.html liefern
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+});
+
 // --- Server Startup ---
 app.listen(PORT, () => {
     console.log(`Backend server running on http://localhost:${PORT}`);
