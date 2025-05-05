@@ -335,7 +335,7 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
 const path = require('path');
 
 // Statischen Ordner für das Frontend bereitstellen
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+app.use(express.static(path.join(__dirname, '..', 'Frontend')));
 
 // Bei Aufruf der Startseite automatisch flashcard_app_german.html liefern
 app.get('/', (req, res) => {
