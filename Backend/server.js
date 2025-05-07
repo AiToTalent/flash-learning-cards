@@ -160,15 +160,12 @@ async function extractText(inputType, data) {
             text = text.replace(/\s\s+/g, ' ').trim();
             console.log(`Extracted ${text.length} characters from URL.`);
 
-            // --- UPDATED: Warning for very short text ---
             if (text.length === 0) {
                  console.warn("Extracted text from URL is empty. The page might use JavaScript rendering heavily or have no parsable text content.");
                  return Promise.resolve("[Kein Textinhalt von URL extrahiert. Möglicherweise JavaScript-Rendering oder keine Textinhalte.]");
-            } else if (text.length > 0 && text.length < 150) { // Threshold for "very short"
+            } else if (text.length > 0 && text.length < 150) {
                  console.warn(`Extracted text from URL is very short (${text.length} chars). Content might be incomplete or the page uses heavy JavaScript rendering.`);
-                 // We still return the short text for the AI to attempt processing
             }
-            // --- END OF UPDATE ---
 
             return Promise.resolve(text);
 
@@ -201,7 +198,7 @@ async function generateFlashcardsAI(textContent, maxCards = 15) {
     const numCards = Math.max(3, Math.min(25, maxCards));
     console.log(`Requesting ${numCards} cards from AI.`);
 
-    if (!textContent || textContent.trim().length < 10) { // Increased minimum length slightly
+    if (!textContent || textContent.trim().length < 10) {
         console.log("Text content too short or empty, returning example cards.");
         return [{ front: "Kein Inhalt?", back: "Es wurde kein ausreichender Textinhalt für die Generierung gefunden oder der Inhalt war zu kurz." }];
     }
@@ -297,10 +294,11 @@ function handleMulterError(err, req, res, next) {
   }
 }
 
+// API endpoint for generating flashcards
 app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (req, res) => {
     const inputType = req.body.inputType;
     let data;
-    const maxCards = parseInt(req.body.maxCards) || 15; // Default to 15 if not specified
+    const maxCards = parseInt(req.body.maxCards) || 15;
     console.log(`Max cards requested by client: ${maxCards}`);
 
     console.log(`Received request for input type: ${inputType}`);
@@ -331,16 +329,22 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
 
 
 const path = require('path');
-// Serve static files from the 'frontend' directory, assuming it's one level up from 'Backend'
-const frontendPath = path.join(__dirname, '..', 'frontend'); // Adjusted path
+// Serve static files from the 'frontend' directory
+// Assumes 'frontend' is a sibling directory to the 'Backend' directory where server.js is located.
+const frontendPath = path.join(__dirname, '..', 'frontend');
 console.log(`Serving static files from: ${frontendPath}`);
 app.use(express.static(frontendPath));
 
-// Serve the main HTML file for any root or direct route requests
-app.get('/*', (req, res) => { // Catch-all for SPA-like behavior or direct access
+// --- CORRECTED CATCH-ALL ROUTE ---
+// This route should come AFTER your API routes.
+// It serves the main HTML file for any non-API GET requests,
+// enabling client-side routing or direct access to the app's root.
+app.get('*', (req, res) => {
   res.sendFile(path.join(frontendPath, 'flashcard_app_german.html'), (err) => {
     if (err) {
-      res.status(500).send(err);
+      // Log the error and send a generic 500 status if the file can't be sent.
+      console.error("Error sending HTML file:", err);
+      res.status(500).send("Internal server error: Could not load the application.");
     }
   });
 });
