@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KI Lernkarten App (Lernfortschritt speichern)</title> <script src="https://cdn.tailwindcss.com"></script>
+    <title>KI Lernkarten App (Lernfortschritt speichern)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
@@ -281,8 +282,8 @@
         const flashcard = document.getElementById('flashcard');
         const cardFrontText = document.getElementById('card-front-text');
         const cardBackText = document.getElementById('card-back-text');
-        const cardStatusIconFront = document.getElementById('card-status-icon-front'); // Added
-        const cardStatusIconBack = document.getElementById('card-status-icon-back');   // Added
+        const cardStatusIconFront = document.getElementById('card-status-icon-front');
+        const cardStatusIconBack = document.getElementById('card-status-icon-back');
         const prevButton = document.getElementById('prev-button');
         const nextButton = document.getElementById('next-button');
         const cardCounter = document.getElementById('card-counter');
@@ -294,20 +295,20 @@
         const repeatButton = document.getElementById('repeat-button');
         const shuffleButton = document.getElementById('shuffle-button');
         const maxCardsInput = document.getElementById('max-cards-input');
-        const resetProgressButton = document.getElementById('reset-progress-button'); // Added
+        const resetProgressButton = document.getElementById('reset-progress-button');
 
 
         // --- Configuration ---
         const BACKEND_URL = '/api/generate'; // For production on Render
-        const LOCAL_STORAGE_KEY_PREFIX = 'flashcardProgress_'; // Added
-        let currentSourceIdentifier = ''; // Added
+        const LOCAL_STORAGE_KEY_PREFIX = 'flashcardProgress_';
+        let currentSourceIdentifier = '';
 
         // --- State ---
         let cards = [];
         let currentCardIndex = 0;
         let isCardFlipped = false;
         let activeTab = 'text';
-        let cardFeedbackTimeout = null; // Renamed from cardStatusTimeout for clarity
+        let cardFeedbackTimeout = null;
 
         // --- Functions ---
 
@@ -331,23 +332,21 @@
             clearError();
         }
 
-        function clearCardFeedbackIndicator() { // Renamed from clearCardStatusIndicator
+        function clearCardFeedbackIndicator() {
              if (cardFeedbackTimeout) clearTimeout(cardFeedbackTimeout);
              flashcardContainer.classList.remove('feedback-known', 'feedback-repeat');
         }
 
-        // Added: simpleHash function
         function simpleHash(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
                 const char = str.charCodeAt(i);
                 hash = ((hash << 5) - hash) + char;
-                hash |= 0; // Convert to 32bit integer
+                hash |= 0;
             }
             return Math.abs(hash).toString(36);
         }
 
-        // Added: loadProgress function
         function loadProgress() {
             if (!currentSourceIdentifier) return;
             const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
@@ -362,7 +361,6 @@
             }
         }
 
-        // Added: saveProgress function
         function saveProgress() {
             if (!currentSourceIdentifier || cards.length === 0) return;
             const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
@@ -379,7 +377,6 @@
             }
         }
 
-        // Added: updatePersistentStatusIcon function
         function updatePersistentStatusIcon(card) {
             [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => {
                 iconEl.style.display = 'none';
@@ -405,7 +402,7 @@
             if (cards.length === 0) {
                 flashcardArea.style.display = 'none';
                 noCardsMessage.style.display = 'block';
-                updatePersistentStatusIcon(null); // Clear icon
+                updatePersistentStatusIcon(null);
                 updateNavigation();
                 return;
             }
@@ -416,7 +413,7 @@
             const card = cards[currentCardIndex];
             cardFrontText.textContent = card.front;
             cardBackText.textContent = card.back;
-            updatePersistentStatusIcon(card); // Update icon based on card's status
+            updatePersistentStatusIcon(card);
 
             if (isCardFlipped) {
                 flashcard.classList.remove('is-flipped');
@@ -436,7 +433,7 @@
              knownButton.disabled = !hasCards;
              repeatButton.disabled = !hasCards;
              shuffleButton.disabled = !hasMultipleCards;
-             resetProgressButton.disabled = !hasCards; // Added
+             resetProgressButton.disabled = !hasCards;
         }
 
         function flipCard() {
@@ -455,7 +452,7 @@
             }
         }
 
-        function markCardStatus(status) { // Modified
+        function markCardStatus(status) {
              if (cards.length === 0) return;
              clearCardFeedbackIndicator();
              flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat');
@@ -481,7 +478,6 @@
             displayCard(0);
         }
 
-        // Added: resetCurrentProgress function
         function resetCurrentProgress() {
             if (!currentSourceIdentifier || cards.length === 0) return;
             const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
@@ -502,8 +498,7 @@
             let fetchOptions = { method: 'POST' };
             let requestPayload = {};
             const maxCards = parseInt(maxCardsInput.value, 10) || 10;
-
-            let sourceName = `text_input_temp`; // Default
+            let sourceName = `text_input_temp`;
 
             if (activeTab === 'text') {
                 const textData = textInput.value;
@@ -529,7 +524,7 @@
                 fetchOptions.body = JSON.stringify(requestPayload);
                 sourceName = `url_${simpleHash(urlData)}`;
             }
-            currentSourceIdentifier = sourceName; // Set identifier
+            currentSourceIdentifier = sourceName;
 
             loadingIndicator.style.display = 'block';
             aiNotice.style.display = 'none';
@@ -540,19 +535,30 @@
             currentCardIndex = 0;
 
             console.log(`Sending request to: ${BACKEND_URL} for source: ${currentSourceIdentifier}`);
-            // ... (logging of fetchOptions and body remains the same)
+            if (fetchOptions.body instanceof FormData) {
+                 console.log('Request FormData includes:');
+                 for (let [key, value] of fetchOptions.body.entries()) {
+                     if (value instanceof File) { console.log(`  ${key}: ${value.name}`); }
+                     else { console.log(`  ${key}: ${value}`); }
+                 }
+             } else { console.log('Request body:', fetchOptions.body); }
 
             try {
                 const response = await fetch(BACKEND_URL, fetchOptions);
-                // ... (response handling remains the same)
+                console.log(`Response status: ${response.status} ${response.statusText}`);
+                if (!response.ok) {
+                    let errorMsg = `Fehler vom Server: ${response.status} ${response.statusText}`;
+                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
+                    throw new Error(errorMsg);
+                }
                 const data = await response.json();
                 console.log('Data received:', data);
                 if (data.flashcards && Array.isArray(data.flashcards)) {
-                    cards = data.flashcards.map((card, index) => ({ // Assign IDs
+                    cards = data.flashcards.map((card, index) => ({
                         ...card,
                         id: `card_${index}`
                     }));
-                    loadProgress(); // Load progress for this set
+                    loadProgress();
                     currentCardIndex = 0;
                     isCardFlipped = false;
                     aiNotice.style.display = 'block';
@@ -576,7 +582,7 @@
         knownButton.addEventListener('click', () => markCardStatus('known'));
         repeatButton.addEventListener('click', () => markCardStatus('repeat'));
         shuffleButton.addEventListener('click', shuffleCards);
-        resetProgressButton.addEventListener('click', resetCurrentProgress); // Added
+        resetProgressButton.addEventListener('click', resetCurrentProgress);
 
 
         // --- Initial State ---
