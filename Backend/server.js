@@ -25,8 +25,8 @@ if (!GEMINI_API_KEY) {
 } else {
     try {
         genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        // --- UPDATED MODEL NAME based on Google Error Message ---
-        const modelName = "gemini-2.5-pro-exp-03-25"; // Use the suggested experimental model
+        // --- REVERTED MODEL ---
+        const modelName = "gemini-2.5-flash-preview-04-17"; // Reverted back to flash model
         modelFlashcard = genAI.getGenerativeModel({ model: modelName });
         modelQuiz = genAI.getGenerativeModel({ model: modelName });
         console.log(`Gemini API Client initialisiert mit Modell: ${modelName}`);
@@ -62,7 +62,7 @@ const upload = multer({
     }
 });
 
-// --- Text Extraction Function ---
+// --- Text Extraction Function --- (remains the same)
 async function extractText(inputType, data) {
     console.log(`Attempting to extract text from type: ${inputType}`);
     if (inputType === 'text') { return Promise.resolve(data || ''); }
