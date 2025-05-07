@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KI Lernkarten & Quiz App (Punkte)</title> <script src="https://cdn.tailwindcss.com"></script>
+    <title>KI Lernkarten & Quiz App (Punkte)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
@@ -12,15 +13,54 @@
             background-image: linear-gradient(to top, #f3e8ff, #e9d5ff);
         }
 
-        /* Flashcard styles */
-        .flashcard-container { perspective: 1000px; min-height: 250px; position: relative; transition: box-shadow 0.3s ease-in-out; width: 100%; height: 288px; margin-bottom: 1.25rem; border-radius: 0.75rem; }
+        /* Custom styles for flashcard flip */
+        .flashcard-container {
+            perspective: 1000px;
+            /* Removed fixed height, let content define it */
+            min-height: 250px;
+            position: relative;
+            transition: box-shadow 0.3s ease-in-out;
+            width: 100%;
+            margin-bottom: 1.25rem; /* mb-5 */
+            border-radius: 0.75rem; /* rounded-xl */
+        }
+        /* Feedback Status indicator styles */
         .flashcard-container.feedback-known { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); }
         .flashcard-container.feedback-repeat { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); }
-        .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1); cursor: pointer; }
+
+        .flashcard {
+            width: 100%;
+            height: 288px; /* Set fixed height on the card itself (h-72) */
+            position: relative; /* Ensure positioning context */
+            transform-style: preserve-3d;
+            transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1);
+            cursor: pointer;
+        }
         .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); font-family: 'Inter', sans-serif; text-align: center; border: 1px solid rgba(0,0,0,0.05); position: relative; overflow-wrap: break-word; word-wrap: break-word; hyphens: auto; }
+
+        .flashcard-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.05);
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            hyphens: auto;
+        }
         .flashcard-front { background-color: #ffffff; color: #1f2937; }
         .flashcard-back { background-color: #f5f3ff; color: #5b21b6; transform: rotateY(180deg); }
+
+        /* Status Icon */
         .status-icon { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: white; z-index: 10; }
         .status-icon-known { background-color: rgba(34, 197, 94, 0.8); }
         .status-icon-repeat { background-color: rgba(239, 68, 68, 0.8); }
@@ -60,25 +100,17 @@
         .quiz-results { margin-top: 1.5rem; padding: 1rem; background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 0.5rem; text-align: center; }
 
         /* Score display */
-        .score-display {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #4b5563; /* gray-600 */
-            background-color: #f3f4f6; /* gray-100 */
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px; /* pill shape */
-            border: 1px solid #e5e7eb; /* gray-200 */
-        }
+        .score-display { font-size: 0.9rem; font-weight: 500; color: #4b5563; background-color: #f3f4f6; padding: 0.3rem 0.8rem; border-radius: 9999px; border: 1px solid #e5e7eb; }
 
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-50 via-white to-sky-50 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
 
-    <div class="w-full max-w-3xl bg-white p-6 md:p-10 rounded-xl shadow-xl relative"> <div class="absolute top-4 right-4 md:top-6 md:right-6">
+    <div class="w-full max-w-3xl bg-white p-6 md:p-10 rounded-xl shadow-xl relative">
+        <div class="absolute top-4 right-4 md:top-6 md:right-6">
             <span id="score-display" class="score-display">Punkte: 0</span>
         </div>
-        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-8 pt-4"> KI Lernkarten & Quiz App ✨
-        </h1>
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-8 pt-4"> KI Lernkarten & Quiz App ✨ </h1>
 
         <div class="mb-6 border-b border-gray-200">
             <nav class="flex space-x-1 md:space-x-2 justify-center" aria-label="Tabs">
@@ -239,7 +271,7 @@
         const noQuizMessage = document.getElementById('no-quiz-message');
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
-        // NEW: Score Element
+        // Score Element
         const scoreDisplay = document.getElementById('score-display');
 
 
@@ -248,9 +280,9 @@
         const BACKEND_URL_FLASHCARDS = `${API_BASE_URL}/api/generate`;
         const BACKEND_URL_QUIZ = `${API_BASE_URL}/api/generate-quiz`;
         const LOCAL_STORAGE_KEY_PREFIX = 'flashcardProgress_';
-        const SCORE_STORAGE_KEY = 'flashcardAppTotalScore'; // Key for total score
-        const POINTS_QUIZ_CORRECT = 10; // Points for correct quiz answer
-        const POINTS_CARD_KNOWN = 2;   // Points for marking card as known
+        const SCORE_STORAGE_KEY = 'flashcardAppTotalScore';
+        const POINTS_QUIZ_CORRECT = 10;
+        const POINTS_CARD_KNOWN = 2;
 
         let currentSourceIdentifier = '';
 
@@ -266,174 +298,57 @@
         let activeTab = 'text';
         let cardFeedbackTimeout = null;
         let currentMode = 'flashcards';
-        let totalScore = 0; // NEW: Total score state
+        let totalScore = 0;
 
         // --- Functions ---
 
-        // NEW: Update and save total score
-        function addScore(points) {
-            totalScore += points;
-            localStorage.setItem(SCORE_STORAGE_KEY, totalScore);
-            updateScoreDisplay();
-            console.log(`Added ${points} points. New total score: ${totalScore}`);
-        }
-
-        // NEW: Load total score from localStorage
-        function loadTotalScore() {
-            const savedScore = localStorage.getItem(SCORE_STORAGE_KEY);
-            totalScore = parseInt(savedScore, 10) || 0; // Default to 0 if not found or invalid
-            updateScoreDisplay();
-        }
-
-        // NEW: Update the score display in the UI
-        function updateScoreDisplay() {
-            if (scoreDisplay) { // Check if element exists
-                scoreDisplay.textContent = `Punkte: ${totalScore}`;
-            }
-        }
-
-
-        function displayError(message) { /* ... */ errorMessage.textContent = message; errorArea.style.display = 'block'; loadingIndicator.style.display = 'none'; flashcardArea.style.display = 'none'; quizArea.style.display = 'none'; noCardsMessage.style.display = 'none'; noQuizMessage.style.display = 'none'; }
-        function clearError() { /* ... */ errorMessage.textContent = ''; errorArea.style.display = 'none'; }
-        function switchTab(tabId) { /* ... */ activeTab = tabId.split('-')[0]; if (tabButtons && tabButtons.length > 0) { tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabId)); } if (tabContents && tabContents.length > 0) { tabContents.forEach(content => content.classList.toggle('active', content.id === tabId)); } clearError(); hideFlashcards(); hideQuiz(); }
-        function clearCardFeedbackIndicator() { /* ... */ if (cardFeedbackTimeout) clearTimeout(cardFeedbackTimeout); flashcardContainer.classList.remove('feedback-known', 'feedback-repeat'); }
-        function simpleHash(str) { /* ... */ let hash = 0; for (let i = 0; i < str.length; i++) { const char = str.charCodeAt(i); hash = ((hash << 5) - hash) + char; hash |= 0; } return Math.abs(hash).toString(36); }
-        function loadProgress() { /* ... */ if (!currentSourceIdentifier) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const savedProgress = localStorage.getItem(key); if (savedProgress) { const progressData = JSON.parse(savedProgress); cards.forEach(card => { if (progressData[card.id]) { card.status = progressData[card.id]; } }); } }
-        function saveProgress() { /* ... */ if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const progressToSave = {}; cards.forEach(card => { if (card.status) { progressToSave[card.id] = card.status; } }); if (Object.keys(progressToSave).length > 0) { localStorage.setItem(key, JSON.stringify(progressToSave)); } else { localStorage.removeItem(key); } }
-        function updatePersistentStatusIcon(card) { /* ... */ [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => { iconEl.style.display = 'none'; iconEl.className = 'status-icon'; if (card && card.status) { iconEl.style.display = 'flex'; if (card.status === 'known') { iconEl.classList.add('status-icon-known'); iconEl.textContent = '✓'; } else if (card.status === 'repeat') { iconEl.classList.add('status-icon-repeat'); iconEl.textContent = '✕'; } } }); }
+        function addScore(points) { totalScore += points; localStorage.setItem(SCORE_STORAGE_KEY, totalScore); updateScoreDisplay(); console.log(`Added ${points} points. New total score: ${totalScore}`); }
+        function loadTotalScore() { const savedScore = localStorage.getItem(SCORE_STORAGE_KEY); totalScore = parseInt(savedScore, 10) || 0; updateScoreDisplay(); }
+        function updateScoreDisplay() { if (scoreDisplay) { scoreDisplay.textContent = `Punkte: ${totalScore}`; } }
+        function displayError(message) { errorMessage.textContent = message; errorArea.style.display = 'block'; loadingIndicator.style.display = 'none'; flashcardArea.style.display = 'none'; quizArea.style.display = 'none'; noCardsMessage.style.display = 'none'; noQuizMessage.style.display = 'none'; }
+        function clearError() { errorMessage.textContent = ''; errorArea.style.display = 'none'; }
+        function switchTab(tabId) { activeTab = tabId.split('-')[0]; if (tabButtons && tabButtons.length > 0) { tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabId)); } if (tabContents && tabContents.length > 0) { tabContents.forEach(content => content.classList.toggle('active', content.id === tabId)); } clearError(); hideFlashcards(); hideQuiz(); }
+        function clearCardFeedbackIndicator() { if (cardFeedbackTimeout) clearTimeout(cardFeedbackTimeout); flashcardContainer.classList.remove('feedback-known', 'feedback-repeat'); }
+        function simpleHash(str) { let hash = 0; for (let i = 0; i < str.length; i++) { const char = str.charCodeAt(i); hash = ((hash << 5) - hash) + char; hash |= 0; } return Math.abs(hash).toString(36); }
+        function loadProgress() { if (!currentSourceIdentifier) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const savedProgress = localStorage.getItem(key); if (savedProgress) { const progressData = JSON.parse(savedProgress); cards.forEach(card => { if (progressData[card.id]) { card.status = progressData[card.id]; } }); } }
+        function saveProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const progressToSave = {}; cards.forEach(card => { if (card.status) { progressToSave[card.id] = card.status; } }); if (Object.keys(progressToSave).length > 0) { localStorage.setItem(key, JSON.stringify(progressToSave)); } else { localStorage.removeItem(key); } }
+        function updatePersistentStatusIcon(card) { [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => { iconEl.style.display = 'none'; iconEl.className = 'status-icon'; if (card && card.status) { iconEl.style.display = 'flex'; if (card.status === 'known') { iconEl.classList.add('status-icon-known'); iconEl.textContent = '✓'; } else if (card.status === 'repeat') { iconEl.classList.add('status-icon-repeat'); iconEl.textContent = '✕'; } } }); }
 
         // --- Flashcard Specific Functions ---
         function hideFlashcards() { flashcardArea.style.display = 'none'; noCardsMessage.style.display = 'none'; }
-        function displayCard(index = currentCardIndex) { /* ... */ hideQuiz(); clearCardFeedbackIndicator(); if (index < 0 || index >= cards.length) index = 0; currentCardIndex = index; if (cards.length === 0) { hideFlashcards(); noCardsMessage.style.display = 'block'; updatePersistentStatusIcon(null); updateNavigation(); return; } noCardsMessage.style.display = 'none'; flashcardArea.style.display = 'block'; const card = cards[currentCardIndex]; cardFrontText.textContent = card.front || 'Fehler: Frage fehlt'; cardBackText.textContent = card.back || 'Fehler: Antwort fehlt'; updatePersistentStatusIcon(card); if (isCardFlipped) { flashcard.classList.remove('is-flipped'); isCardFlipped = false; } updateNavigation(); }
-        function updateNavigation() { /* ... */ const hasCards = cards.length > 0; const hasMultipleCards = cards.length > 1; flashcardArea.style.display = (hasCards && currentMode === 'flashcards') ? 'block' : 'none'; noCardsMessage.style.display = (!hasCards && currentMode === 'flashcards') ? 'block' : 'none'; cardCounter.textContent = `Karte ${hasCards ? currentCardIndex + 1 : 0} / ${cards.length}`; prevButton.disabled = !hasCards || currentCardIndex === 0; nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1; knownButton.disabled = !hasCards; repeatButton.disabled = !hasCards; shuffleButton.disabled = !hasMultipleCards; resetProgressButton.disabled = !hasCards; }
-        function flipCard() { /* ... */ if (cards.length === 0) return; isCardFlipped = !isCardFlipped; flashcard.classList.toggle('is-flipped', isCardFlipped); }
-        function goToNextCard() { /* ... */ if (currentCardIndex < cards.length - 1) { currentCardIndex++; displayCard(); } else { console.log("End of cards reached."); clearCardFeedbackIndicator(); } }
-        function markCardStatus(status) { // Modified for scoring
-            if (cards.length === 0) return;
-            clearCardFeedbackIndicator();
-            flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat');
-            const previousStatus = cards[currentCardIndex].status;
-            cards[currentCardIndex].status = status;
-            if (status === 'known' && previousStatus !== 'known') {
-                addScore(POINTS_CARD_KNOWN); // Add points
-            }
-            updatePersistentStatusIcon(cards[currentCardIndex]);
-            saveProgress();
-            cardFeedbackTimeout = setTimeout(() => { clearCardFeedbackIndicator(); goToNextCard(); }, 400);
-        }
-        function shuffleCards() { /* ... */ if (cards.length < 2) return; console.log("Shuffling cards..."); for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; } console.log("Cards shuffled."); displayCard(0); }
-        function resetCurrentProgress() { /* ... */ if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; localStorage.removeItem(key); cards.forEach(card => delete card.status); console.log(`Progress reset for source: ${currentSourceIdentifier}`); displayCard(currentCardIndex); }
+        function displayCard(index = currentCardIndex) { hideQuiz(); clearCardFeedbackIndicator(); if (index < 0 || index >= cards.length) index = 0; currentCardIndex = index; if (cards.length === 0) { hideFlashcards(); noCardsMessage.style.display = 'block'; updatePersistentStatusIcon(null); updateNavigation(); return; } noCardsMessage.style.display = 'none'; flashcardArea.style.display = 'block'; const card = cards[currentCardIndex]; cardFrontText.textContent = card.front || 'Fehler: Frage fehlt'; cardBackText.textContent = card.back || 'Fehler: Antwort fehlt'; updatePersistentStatusIcon(card); if (isCardFlipped) { flashcard.classList.remove('is-flipped'); isCardFlipped = false; } updateNavigation(); }
+        function updateNavigation() { const hasCards = cards.length > 0; const hasMultipleCards = cards.length > 1; flashcardArea.style.display = (hasCards && currentMode === 'flashcards') ? 'block' : 'none'; noCardsMessage.style.display = (!hasCards && currentMode === 'flashcards') ? 'block' : 'none'; cardCounter.textContent = `Karte ${hasCards ? currentCardIndex + 1 : 0} / ${cards.length}`; prevButton.disabled = !hasCards || currentCardIndex === 0; nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1; knownButton.disabled = !hasCards; repeatButton.disabled = !hasCards; shuffleButton.disabled = !hasMultipleCards; resetProgressButton.disabled = !hasCards; }
+        function flipCard() { if (cards.length === 0) return; isCardFlipped = !isCardFlipped; flashcard.classList.toggle('is-flipped', isCardFlipped); }
+        function goToNextCard() { if (currentCardIndex < cards.length - 1) { currentCardIndex++; displayCard(); } else { console.log("End of cards reached."); clearCardFeedbackIndicator(); } }
+        function markCardStatus(status) { if (cards.length === 0) return; clearCardFeedbackIndicator(); flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat'); const previousStatus = cards[currentCardIndex].status; cards[currentCardIndex].status = status; if (status === 'known' && previousStatus !== 'known') { addScore(POINTS_CARD_KNOWN); } updatePersistentStatusIcon(cards[currentCardIndex]); saveProgress(); cardFeedbackTimeout = setTimeout(() => { clearCardFeedbackIndicator(); goToNextCard(); }, 400); }
+        function shuffleCards() { if (cards.length < 2) return; console.log("Shuffling cards..."); for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; } console.log("Cards shuffled."); displayCard(0); }
+        function resetCurrentProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; localStorage.removeItem(key); cards.forEach(card => delete card.status); console.log(`Progress reset for source: ${currentSourceIdentifier}`); displayCard(currentCardIndex); }
 
         // --- Quiz Specific Functions ---
         function hideQuiz() { quizArea.style.display = 'none'; noQuizMessage.style.display = 'none'; quizFeedback.style.display = 'none'; quizResultsArea.style.display = 'none'; }
-
         function displayQuizQuestion() {
-            hideFlashcards();
-            if (quizQuestions.length === 0 || currentQuizIndex >= quizQuestions.length) { hideQuiz(); noQuizMessage.style.display = 'block'; return; }
-
-            noQuizMessage.style.display = 'none';
-            quizArea.style.display = 'block';
-            quizFeedback.style.display = 'none';
-            quizResultsArea.style.display = 'none';
-            quizSubmitButton.textContent = 'Antwort prüfen';
-            quizSubmitButton.disabled = true;
-            quizAnswerChecked = false;
-            currentQuizSelectedIndices.clear();
-
-            const questionData = quizQuestions[currentQuizIndex];
-            let optionsHtml = `<div class="quiz-question">${currentQuizIndex + 1}. ${questionData.question}</div>`;
-            optionsHtml += '<div class="quiz-options space-y-2">';
-            questionData.options.forEach((option, index) => {
-                const checkboxId = `q${currentQuizIndex}_opt${index}`;
-                optionsHtml += `
-                    <label for="${checkboxId}" class="block">
-                        <input type="checkbox" id="${checkboxId}" name="quizOption_${currentQuizIndex}" value="${index}" data-index="${index}">
-                        <span>${option}</span>
-                    </label>
-                `;
-            });
-            optionsHtml += '</div>';
-            quizContent.innerHTML = optionsHtml;
-
-            const optionsContainer = quizContent.querySelector('.quiz-options');
-            if (optionsContainer) {
-                optionsContainer.removeEventListener('change', handleOptionChange);
-                optionsContainer.addEventListener('change', handleOptionChange);
-            } else { console.error("Could not find .quiz-options container."); }
+            hideFlashcards(); if (quizQuestions.length === 0 || currentQuizIndex >= quizQuestions.length) { hideQuiz(); noQuizMessage.style.display = 'block'; return; }
+            noQuizMessage.style.display = 'none'; quizArea.style.display = 'block'; quizFeedback.style.display = 'none'; quizResultsArea.style.display = 'none'; quizSubmitButton.textContent = 'Antwort prüfen'; quizSubmitButton.disabled = true; quizAnswerChecked = false; currentQuizSelectedIndices.clear();
+            const questionData = quizQuestions[currentQuizIndex]; let optionsHtml = `<div class="quiz-question">${currentQuizIndex + 1}. ${questionData.question}</div>`; optionsHtml += '<div class="quiz-options space-y-2">';
+            questionData.options.forEach((option, index) => { const checkboxId = `q${currentQuizIndex}_opt${index}`; optionsHtml += `<label for="${checkboxId}" class="block"><input type="checkbox" id="${checkboxId}" name="quizOption_${currentQuizIndex}" value="${index}" data-index="${index}"><span>${option}</span></label>`; });
+            optionsHtml += '</div>'; quizContent.innerHTML = optionsHtml;
+            const optionsContainer = quizContent.querySelector('.quiz-options'); if (optionsContainer) { optionsContainer.removeEventListener('change', handleOptionChange); optionsContainer.addEventListener('change', handleOptionChange); } else { console.error("Could not find .quiz-options container."); }
         }
-
-        function handleOptionChange(event) {
-            if (event.target.type === 'checkbox') {
-                const checkboxElement = event.target;
-                const index = parseInt(checkboxElement.value, 10);
-                if (checkboxElement.checked) { currentQuizSelectedIndices.add(index); }
-                else { currentQuizSelectedIndices.delete(index); }
-                quizSubmitButton.disabled = currentQuizSelectedIndices.size === 0;
-                console.log("Selected indices:", currentQuizSelectedIndices);
-                const label = checkboxElement.closest('label');
-                if (label) { label.classList.toggle('bg-indigo-100', checkboxElement.checked); label.classList.toggle('border-indigo-400', checkboxElement.checked); }
-            }
+        function handleOptionChange(event) { if (event.target.type === 'checkbox') { const checkboxElement = event.target; const index = parseInt(checkboxElement.value, 10); if (checkboxElement.checked) { currentQuizSelectedIndices.add(index); } else { currentQuizSelectedIndices.delete(index); } quizSubmitButton.disabled = currentQuizSelectedIndices.size === 0; console.log("Selected indices:", currentQuizSelectedIndices); const label = checkboxElement.closest('label'); if (label) { label.classList.toggle('bg-indigo-100', checkboxElement.checked); label.classList.toggle('border-indigo-400', checkboxElement.checked); } } }
+        function checkQuizAnswer() {
+            if (currentQuizSelectedIndices.size === 0) return; const questionData = quizQuestions[currentQuizIndex]; const correctIndices = new Set(Array.isArray(questionData.correctAnswerIndices) ? questionData.correctAnswerIndices : [questionData.correctAnswerIndex]); const selectedIndices = currentQuizSelectedIndices; let isFullyCorrect = correctIndices.size === selectedIndices.size && [...correctIndices].every(index => selectedIndices.has(index));
+            quizFeedback.style.display = 'block'; quizFeedback.classList.remove('feedback-correct', 'feedback-incorrect');
+            document.querySelectorAll('.quiz-options label').forEach((label, index) => { const checkbox = label.querySelector('input[type="checkbox"]'); checkbox.disabled = true; label.style.cursor = 'default'; label.classList.remove('correct', 'incorrect', 'missed', 'bg-indigo-100', 'border-indigo-400'); const isCorrectOption = correctIndices.has(index); const isSelected = selectedIndices.has(index); if (isCorrectOption && isSelected) { label.classList.add('correct'); } else if (!isCorrectOption && isSelected) { label.classList.add('incorrect'); } else if (isCorrectOption && !isSelected) { label.classList.add('missed'); } });
+            if (isFullyCorrect) { quizScore++; addScore(POINTS_QUIZ_CORRECT); quizFeedback.textContent = `Richtig! (+${POINTS_QUIZ_CORRECT} Punkte)`; quizFeedback.classList.add('feedback-correct'); }
+            else { const correctAnswersText = [...correctIndices].map(i => questionData.options[i]).join('; '); quizFeedback.textContent = `Teilweise richtig / Falsch. Korrekte Antwort(en): ${correctAnswersText}`; quizFeedback.classList.add('feedback-incorrect'); }
+            quizAnswerChecked = true; quizSubmitButton.textContent = (currentQuizIndex < quizQuestions.length - 1) ? 'Nächste Frage' : 'Ergebnis anzeigen'; quizSubmitButton.disabled = false;
         }
-
-        function checkQuizAnswer() { // Modified for scoring
-            if (currentQuizSelectedIndices.size === 0) return;
-
-            const questionData = quizQuestions[currentQuizIndex];
-            const correctIndices = new Set(Array.isArray(questionData.correctAnswerIndices) ? questionData.correctAnswerIndices : [questionData.correctAnswerIndex]);
-            const selectedIndices = currentQuizSelectedIndices;
-            let isFullyCorrect = correctIndices.size === selectedIndices.size && [...correctIndices].every(index => selectedIndices.has(index));
-
-            quizFeedback.style.display = 'block';
-            quizFeedback.classList.remove('feedback-correct', 'feedback-incorrect');
-
-            document.querySelectorAll('.quiz-options label').forEach((label, index) => {
-                 const checkbox = label.querySelector('input[type="checkbox"]');
-                 checkbox.disabled = true; label.style.cursor = 'default';
-                 label.classList.remove('correct', 'incorrect', 'missed', 'bg-indigo-100', 'border-indigo-400');
-                 const isCorrectOption = correctIndices.has(index); const isSelected = selectedIndices.has(index);
-                 if (isCorrectOption && isSelected) { label.classList.add('correct'); }
-                 else if (!isCorrectOption && isSelected) { label.classList.add('incorrect'); }
-                 else if (isCorrectOption && !isSelected) { label.classList.add('missed'); }
-            });
-
-            if (isFullyCorrect) {
-                quizScore++;
-                addScore(POINTS_QUIZ_CORRECT); // Add points for correct answer
-                quizFeedback.textContent = `Richtig! (+${POINTS_QUIZ_CORRECT} Punkte)`;
-                quizFeedback.classList.add('feedback-correct');
-            } else {
-                const correctAnswersText = [...correctIndices].map(i => questionData.options[i]).join('; ');
-                quizFeedback.textContent = `Teilweise richtig / Falsch. Korrekte Antwort(en): ${correctAnswersText}`;
-                quizFeedback.classList.add('feedback-incorrect');
-            }
-
-            quizAnswerChecked = true;
-            quizSubmitButton.textContent = (currentQuizIndex < quizQuestions.length - 1) ? 'Nächste Frage' : 'Ergebnis anzeigen';
-            quizSubmitButton.disabled = false;
-        }
-
-        function showQuizResults() {
-            hideQuiz();
-            quizResultsArea.innerHTML = `
-                <h3 class="text-lg font-semibold mb-2">Quiz beendet!</h3>
-                <p>Dein Ergebnis: ${quizScore} von ${quizQuestions.length} Fragen richtig beantwortet.</p>
-                 <button onclick="restartQuiz()" class="mt-4 bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg shadow">Quiz neu starten</button>
-                 <button onclick="switchToFlashcards()" class="mt-4 ml-2 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg shadow">Zu Lernkarten</button>
-            `;
-            quizResultsArea.style.display = 'block';
-        }
-
-         function restartQuiz() { currentQuizIndex = 0; quizScore = 0; quizAnswerChecked = false; currentQuizSelectedIndices.clear(); displayQuizQuestion(); }
-         function switchToFlashcards() { currentMode = 'flashcards'; hideQuiz(); if (cards.length > 0) { displayCard(0); } else { hideFlashcards(); noCardsMessage.style.display = 'block'; } }
-
-        function handleQuizSubmit() {
-            if (!quizAnswerChecked) { checkQuizAnswer(); }
-            else { currentQuizIndex++; if (currentQuizIndex < quizQuestions.length) { displayQuizQuestion(); } else { showQuizResults(); } }
-        }
-
-        async function generateQuiz() { /* ... (remains the same) ... */
-            clearError(); hideFlashcards(); hideQuiz();
-            let fetchOptions = { method: 'POST' }; let requestPayload = {}; const numQuestions = parseInt(numQuestionsInput.value, 10) || 5;
+        function showQuizResults() { hideQuiz(); quizResultsArea.innerHTML = `<h3 class="text-lg font-semibold mb-2">Quiz beendet!</h3><p>Dein Ergebnis: ${quizScore} von ${quizQuestions.length} Fragen richtig beantwortet.</p><button onclick="restartQuiz()" class="mt-4 bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg shadow">Quiz neu starten</button><button onclick="switchToFlashcards()" class="mt-4 ml-2 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg shadow">Zu Lernkarten</button>`; quizResultsArea.style.display = 'block'; }
+        function restartQuiz() { currentQuizIndex = 0; quizScore = 0; quizAnswerChecked = false; currentQuizSelectedIndices.clear(); displayQuizQuestion(); }
+        function switchToFlashcards() { currentMode = 'flashcards'; hideQuiz(); if (cards.length > 0) { displayCard(0); } else { hideFlashcards(); noCardsMessage.style.display = 'block'; } }
+        function handleQuizSubmit() { if (!quizAnswerChecked) { checkQuizAnswer(); } else { currentQuizIndex++; if (currentQuizIndex < quizQuestions.length) { displayQuizQuestion(); } else { showQuizResults(); } } }
+        async function generateQuiz() {
+            clearError(); hideFlashcards(); hideQuiz(); let fetchOptions = { method: 'POST' }; let requestPayload = {}; const numQuestions = parseInt(numQuestionsInput.value, 10) || 5;
             if (activeTab === 'text') { const textData = textInput.value; if (!textData.trim()) { displayError("Bitte gib zuerst Text ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'text', textData: textData, numQuestions: numQuestions }; fetchOptions.body = JSON.stringify(requestPayload); }
             else if (activeTab === 'file') { const file = fileInput.files[0]; if (!file) { displayError("Bitte wähle zuerst eine Datei aus."); return; } const formData = new FormData(); formData.append('inputType', 'file'); formData.append('inputFile', file); formData.append('numQuestions', numQuestions); fetchOptions.body = formData; }
             else if (activeTab === 'url') { const urlData = urlInput.value; if (!urlData.trim() || !urlData.startsWith('http')) { displayError("Bitte gib zuerst eine gültige URL ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'url', urlData: urlData, numQuestions: numQuestions }; fetchOptions.body = JSON.stringify(requestPayload); }
@@ -453,7 +368,7 @@
 
         // --- Event Listeners ---
         if (tabButtons && tabButtons.length > 0) { tabButtons.forEach(button => { button.addEventListener('click', () => { switchTab(button.dataset.tab); }); }); } else { console.error("Could not find tab buttons on initialization."); }
-        generateButton.addEventListener('click', async () => { /* ... (Flashcard generation logic remains the same) ... */
+        generateButton.addEventListener('click', async () => {
             clearError(); hideQuiz(); let fetchOptions = { method: 'POST' }; let requestPayload = {}; const maxCards = parseInt(maxCardsInput.value, 10) || 10; let sourceName = `text_input_temp`;
             if (activeTab === 'text') { const textData = textInput.value; if (!textData.trim()) { displayError("Bitte gib Text ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'text', textData: textData, maxCards: maxCards }; fetchOptions.body = JSON.stringify(requestPayload); sourceName = `text_${simpleHash(textData.substring(0, 200))}`; }
             else if (activeTab === 'file') { const file = fileInput.files[0]; if (!file) { displayError("Bitte wähle eine Datei aus."); return; } const formData = new FormData(); formData.append('inputType', 'file'); formData.append('inputFile', file); formData.append('maxCards', maxCards); fetchOptions.body = formData; sourceName = `file_${file.name}_${file.size}`; }
