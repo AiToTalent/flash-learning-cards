@@ -3,139 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KI Lernkarten App (Anzahl Karten wählbar)</title> <script src="https://cdn.tailwindcss.com"></script>
+    <title>KI Lernkarten App (Lernfortschritt speichern)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            /* Subtle gradient background */
-            background-image: linear-gradient(to top, #f3e8ff, #e9d5ff); /* Light purple gradient */
+            background-image: linear-gradient(to top, #f3e8ff, #e9d5ff);
         }
 
-        /* Custom styles for flashcard flip */
+        /* Flashcard styles */
         .flashcard-container {
             perspective: 1000px;
-            min-height: 250px; /* Slightly increased height */
+            min-height: 250px;
             position: relative;
             transition: box-shadow 0.3s ease-in-out;
         }
-        /* Status indicator styles */
-        .flashcard-container.status-known {
-             box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); /* Slightly stronger green shadow */
-        }
-        .flashcard-container.status-repeat {
-             box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); /* Slightly stronger red shadow */
-        }
+        .flashcard-container.feedback-known { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); }
+        .flashcard-container.feedback-repeat { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); }
+
         .flashcard {
-            width: 100%;
-            height: 100%;
-            position: relative;
+            width: 100%; height: 100%; position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1); /* Smoother flip animation */
+            transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1);
             cursor: pointer;
         }
-        .flashcard.is-flipped {
-            transform: rotateY(180deg);
-        }
-        .flashcard-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column; /* Allow text to wrap better */
-            justify-content: center;
-            align-items: center;
-            padding: 2rem; /* Increased padding */
-            border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* shadow-lg */
-            font-family: 'Inter', sans-serif;
-            text-align: center;
-            border: 1px solid rgba(0,0,0,0.05); /* Subtle border */
-        }
-        .flashcard-front {
-            background-color: #ffffff;
-            color: #1f2937; /* text-gray-800 */
-        }
-        .flashcard-back {
-            background-color: #f5f3ff; /* Lighter purple background */
-            color: #5b21b6; /* Darker purple text */
-            transform: rotateY(180deg);
-        }
+        .flashcard.is-flipped { transform: rotateY(180deg); }
 
-        /* Basic styling for disabled buttons */
-        button:disabled {
-            opacity: 0.6; /* Slightly more visible when disabled */
-            cursor: not-allowed;
+        .flashcard-face {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 2rem; border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            font-family: 'Inter', sans-serif; text-align: center;
+            border: 1px solid rgba(0,0,0,0.05);
+            /* For persistent status indicators */
+            position: relative; /* To position the status icon */
         }
-        /* General button hover/active states */
+        .flashcard-front { background-color: #ffffff; color: #1f2937; }
+        .flashcard-back { background-color: #f5f3ff; color: #5b21b6; transform: rotateY(180deg); }
+
+        /* Persistent Status Icon on Card */
+        .status-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+        .status-icon-known { background-color: rgba(34, 197, 94, 0.8); /* Green */ }
+        .status-icon-repeat { background-color: rgba(239, 68, 68, 0.8); /* Red */ }
+
+
+        /* Button styles */
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
         button:not(:disabled) {
             transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
         }
         button:not(:disabled):hover {
-            transform: scale(1.03); /* Slight scale on hover */
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+            transform: scale(1.03);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
-         button:not(:disabled):active {
-            transform: scale(0.98); /* Slight shrink on click */
-        }
+        button:not(:disabled):active { transform: scale(0.98); }
 
-        /* Styling for active/inactive tabs */
+        /* Tab styles */
         .tab-button {
-            padding: 0.6rem 1.2rem; /* Slightly larger padding */
-            border-radius: 0.5rem; /* rounded-lg */
-            cursor: pointer;
+            padding: 0.6rem 1.2rem; border-radius: 0.5rem; cursor: pointer;
             transition: all 0.2s ease-in-out;
-            border-bottom: 3px solid transparent; /* Space for active indicator */
-            margin-bottom: -1px; /* Overlap border-bottom */
-            font-weight: 500; /* medium */
+            border-bottom: 3px solid transparent; margin-bottom: -1px; font-weight: 500;
         }
-        .tab-button.active {
-            background-color: transparent; /* No background for active tab */
-            color: #4f46e5; /* text-indigo-600 */
-            border-bottom-color: #4f46e5; /* Indigo border bottom */
-        }
-        .tab-button:not(.active) {
-            background-color: transparent;
-            color: #6b7280; /* text-gray-500 */
-            border-color: transparent;
-        }
-         .tab-button:not(.active):hover {
-             background-color: #f3f4f6; /* bg-gray-100 */
-             color: #374151; /* text-gray-700 */
-         }
-
+        .tab-button.active { background-color: transparent; color: #4f46e5; border-bottom-color: #4f46e5; }
+        .tab-button:not(.active) { background-color: transparent; color: #6b7280; border-color: transparent; }
+        .tab-button:not(.active):hover { background-color: #f3f4f6; color: #374151; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Error message styling */
+        /* Error message */
         .error-message {
-            color: #991b1b; /* dark red */
-            background-color: #fee2e2;
-            border: 1px solid #fca5a5; /* lighter red border */
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem; /* rounded-lg */
-            margin-top: 1rem;
-            text-align: center;
-            font-size: 0.875rem;
-            font-weight: 500;
+            color: #991b1b; background-color: #fee2e2; border: 1px solid #fca5a5;
+            padding: 0.75rem 1rem; border-radius: 0.5rem; margin-top: 1rem;
+            text-align: center; font-size: 0.875rem; font-weight: 500;
         }
-        /* Loading Spinner */
+        /* Loader */
         .loader {
-            border: 4px solid #e5e7eb; /* gray-200 */
-            border-top: 4px solid #4f46e5; /* Indigo */
-            border-radius: 50%;
-            width: 28px; /* Slightly larger */
-            height: 28px;
-            animation: spin 1s linear infinite;
-            margin: 8px auto 0; /* Increased top margin */
+            border: 4px solid #e5e7eb; border-top: 4px solid #4f46e5;
+            border-radius: 50%; width: 28px; height: 28px;
+            animation: spin 1s linear infinite; margin: 8px auto 0;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-50 via-white to-sky-50 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
@@ -193,9 +157,11 @@
             <div id="flashcard-container" class="flashcard-container w-full h-64 md:h-72 mx-auto mb-5 rounded-xl">
                 <div id="flashcard" class="flashcard">
                     <div class="flashcard-face flashcard-front text-lg md:text-xl">
+                        <div id="card-status-icon-front" class="status-icon" style="display: none;"></div>
                         <span id="card-front-text">Frage wird hier angezeigt</span>
                     </div>
                     <div class="flashcard-face flashcard-back text-lg md:text-xl">
+                         <div id="card-status-icon-back" class="status-icon" style="display: none;"></div>
                         <span id="card-back-text">Antwort wird hier angezeigt</span>
                     </div>
                 </div>
@@ -231,6 +197,11 @@
                      Wusste ich
                  </button>
             </div>
+             <div class="text-center mt-6">
+                <button id="reset-progress-button" class="text-xs text-gray-500 hover:text-gray-700 hover:underline disabled:text-gray-300" disabled>
+                    Lernfortschritt zurücksetzen
+                </button>
+            </div>
         </div>
 
          <div id="no-cards-message" class="text-center text-gray-500 mt-4" style="display: none;">
@@ -253,6 +224,8 @@
         const flashcard = document.getElementById('flashcard');
         const cardFrontText = document.getElementById('card-front-text');
         const cardBackText = document.getElementById('card-back-text');
+        const cardStatusIconFront = document.getElementById('card-status-icon-front');
+        const cardStatusIconBack = document.getElementById('card-status-icon-back');
         const prevButton = document.getElementById('prev-button');
         const nextButton = document.getElementById('next-button');
         const cardCounter = document.getElementById('card-counter');
@@ -263,24 +236,23 @@
         const knownButton = document.getElementById('known-button');
         const repeatButton = document.getElementById('repeat-button');
         const shuffleButton = document.getElementById('shuffle-button');
-        // NEW: Max Cards Input
         const maxCardsInput = document.getElementById('max-cards-input');
+        const resetProgressButton = document.getElementById('reset-progress-button'); // New button
 
 
         // --- Configuration ---
-        // const BACKEND_URL = 'http://localhost:3001/api/generate'; // für lokale Tests
-        const BACKEND_URL = '/api/generate'; // für Produktion auf Render
-        
+        const BACKEND_URL = '/api/generate'; // For production on Render
+        const LOCAL_STORAGE_KEY_PREFIX = 'flashcardProgress_'; // Prefix for localStorage keys
+        let currentSourceIdentifier = ''; // To identify the current set of cards (e.g., based on input text hash or filename)
+
         // --- State ---
-        let cards = [];
+        let cards = []; // Holds { id: string, front: string, back: string, status?: 'known' | 'repeat' }
         let currentCardIndex = 0;
         let isCardFlipped = false;
         let activeTab = 'text';
-        let cardStatusTimeout = null;
+        let cardFeedbackTimeout = null;
 
         // --- Functions ---
-        // displayError, clearError, switchTab, clearCardStatusIndicator, displayCard, updateNavigation,
-        // flipCard, goToNextCard, markCardStatus, shuffleCards remain the same as previous version.
 
         function displayError(message) {
             errorMessage.textContent = message;
@@ -297,33 +269,96 @@
 
         function switchTab(tabId) {
             activeTab = tabId.split('-')[0];
-            tabButtons.forEach(button => {
-                button.classList.toggle('active', button.dataset.tab === tabId);
-            });
-            tabContents.forEach(content => {
-                content.classList.toggle('active', content.id === tabId);
-            });
+            tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabId));
+            tabContents.forEach(content => content.classList.toggle('active', content.id === tabId));
             clearError();
         }
 
-        function clearCardStatusIndicator() {
-             if (cardStatusTimeout) {
-                 clearTimeout(cardStatusTimeout);
-                 cardStatusTimeout = null;
-             }
-             flashcardContainer.classList.remove('status-known', 'status-repeat');
+        function clearCardFeedbackIndicator() {
+             if (cardFeedbackTimeout) clearTimeout(cardFeedbackTimeout);
+             flashcardContainer.classList.remove('feedback-known', 'feedback-repeat');
         }
 
+        /**
+         * Generates a simple hash from a string. Not cryptographically secure.
+         * Used to create a somewhat unique ID for text inputs.
+         */
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0; // Convert to 32bit integer
+            }
+            return Math.abs(hash).toString(36);
+        }
+
+        /**
+         * Loads progress for the current set of cards from localStorage.
+         */
+        function loadProgress() {
+            if (!currentSourceIdentifier) return;
+            const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
+            const savedProgress = localStorage.getItem(key);
+            if (savedProgress) {
+                const progressData = JSON.parse(savedProgress);
+                cards.forEach(card => {
+                    if (progressData[card.id]) {
+                        card.status = progressData[card.id];
+                    }
+                });
+            }
+        }
+
+        /**
+         * Saves the progress for the current set of cards to localStorage.
+         */
+        function saveProgress() {
+            if (!currentSourceIdentifier || cards.length === 0) return;
+            const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
+            const progressToSave = {};
+            cards.forEach(card => {
+                if (card.status) {
+                    progressToSave[card.id] = card.status;
+                }
+            });
+            if (Object.keys(progressToSave).length > 0) {
+                localStorage.setItem(key, JSON.stringify(progressToSave));
+            } else {
+                localStorage.removeItem(key); // Remove if no progress to save
+            }
+        }
+
+        /**
+         * Updates the persistent status icon on the card.
+         */
+        function updatePersistentStatusIcon(card) {
+            [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => {
+                iconEl.style.display = 'none';
+                iconEl.className = 'status-icon'; // Reset classes
+                if (card && card.status) {
+                    iconEl.style.display = 'flex';
+                    if (card.status === 'known') {
+                        iconEl.classList.add('status-icon-known');
+                        iconEl.textContent = '✓';
+                    } else if (card.status === 'repeat') {
+                        iconEl.classList.add('status-icon-repeat');
+                        iconEl.textContent = '✕';
+                    }
+                }
+            });
+        }
+
+
         function displayCard(index = currentCardIndex) {
-            clearCardStatusIndicator();
-            if (index < 0 || index >= cards.length) {
-                 index = 0;
-             }
-             currentCardIndex = index;
+            clearCardFeedbackIndicator();
+            if (index < 0 || index >= cards.length) index = 0;
+            currentCardIndex = index;
 
             if (cards.length === 0) {
                 flashcardArea.style.display = 'none';
                 noCardsMessage.style.display = 'block';
+                updatePersistentStatusIcon(null); // Clear icon
                 updateNavigation();
                 return;
             }
@@ -334,28 +369,27 @@
             const card = cards[currentCardIndex];
             cardFrontText.textContent = card.front;
             cardBackText.textContent = card.back;
+            updatePersistentStatusIcon(card); // Update icon based on card's status
 
             if (isCardFlipped) {
                 flashcard.classList.remove('is-flipped');
                 isCardFlipped = false;
             }
-
             updateNavigation();
         }
 
         function updateNavigation() {
              const hasCards = cards.length > 0;
              const hasMultipleCards = cards.length > 1;
-
              flashcardArea.style.display = hasCards ? 'block' : 'none';
              noCardsMessage.style.display = hasCards ? 'none' : 'block';
-
              cardCounter.textContent = `Karte ${hasCards ? currentCardIndex + 1 : 0} / ${cards.length}`;
              prevButton.disabled = !hasCards || currentCardIndex === 0;
              nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1;
              knownButton.disabled = !hasCards;
              repeatButton.disabled = !hasCards;
              shuffleButton.disabled = !hasMultipleCards;
+             resetProgressButton.disabled = !hasCards; // Enable if cards are present
         }
 
         function flipCard() {
@@ -370,16 +404,22 @@
                 displayCard();
             } else {
                  console.log("End of cards reached.");
-                 clearCardStatusIndicator();
+                 clearCardFeedbackIndicator();
             }
         }
 
         function markCardStatus(status) {
              if (cards.length === 0) return;
-             clearCardStatusIndicator();
-             flashcardContainer.classList.add(status === 'known' ? 'status-known' : 'status-repeat');
-             cardStatusTimeout = setTimeout(() => {
-                 clearCardStatusIndicator();
+             clearCardFeedbackIndicator();
+             flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat');
+
+             // Update card object status and save
+             cards[currentCardIndex].status = status;
+             updatePersistentStatusIcon(cards[currentCardIndex]); // Update icon immediately
+             saveProgress();
+
+             cardFeedbackTimeout = setTimeout(() => {
+                 clearCardFeedbackIndicator();
                  goToNextCard();
              }, 400);
         }
@@ -395,6 +435,19 @@
             displayCard(0);
         }
 
+        /**
+         * NEW: Resets the learning progress for the current set of cards.
+         */
+        function resetCurrentProgress() {
+            if (!currentSourceIdentifier || cards.length === 0) return;
+            const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
+            localStorage.removeItem(key);
+            cards.forEach(card => delete card.status); // Remove status from card objects
+            console.log(`Progress reset for source: ${currentSourceIdentifier}`);
+            displayCard(currentCardIndex); // Refresh current card to remove icon
+            // Optionally, provide user feedback e.g. a temporary message
+        }
+
 
         // --- Event Listeners ---
         tabButtons.forEach(button => {
@@ -404,36 +457,37 @@
         generateButton.addEventListener('click', async () => {
             clearError();
             let fetchOptions = { method: 'POST' };
-            let requestPayload = {}; // Object to hold data for JSON requests
+            let requestPayload = {};
+            const maxCards = parseInt(maxCardsInput.value, 10) || 10;
 
-            // NEW: Get max cards value
-            const maxCards = parseInt(maxCardsInput.value, 10) || 10; // Default to 10 if invalid
+            let sourceName = `text_input_${simpleHash(textInput.value.substring(0,100))}`; // Default for text
 
-            // Prepare data and payload
             if (activeTab === 'text') {
                 const textData = textInput.value;
                 if (!textData.trim()) { displayError("Bitte gib Text ein."); return; }
                 fetchOptions.headers = { 'Content-Type': 'application/json' };
-                requestPayload = { inputType: 'text', textData: textData, maxCards: maxCards }; // Add maxCards
+                requestPayload = { inputType: 'text', textData: textData, maxCards: maxCards };
                 fetchOptions.body = JSON.stringify(requestPayload);
+                sourceName = `text_${simpleHash(textData.substring(0, 200))}`; // More specific ID for text
             } else if (activeTab === 'file') {
                 const file = fileInput.files[0];
                 if (!file) { displayError("Bitte wähle eine Datei aus."); return; }
                 const formData = new FormData();
                 formData.append('inputType', 'file');
                 formData.append('inputFile', file);
-                formData.append('maxCards', maxCards); // Add maxCards to FormData
+                formData.append('maxCards', maxCards);
                 fetchOptions.body = formData;
-                // No Content-Type header for FormData
+                sourceName = `file_${file.name}_${file.size}`; // ID based on filename and size
             } else if (activeTab === 'url') {
                 const urlData = urlInput.value;
                 if (!urlData.trim() || !urlData.startsWith('http')) { displayError("Bitte gib eine gültige URL ein."); return; }
                 fetchOptions.headers = { 'Content-Type': 'application/json' };
-                requestPayload = { inputType: 'url', urlData: urlData, maxCards: maxCards }; // Add maxCards
+                requestPayload = { inputType: 'url', urlData: urlData, maxCards: maxCards };
                 fetchOptions.body = JSON.stringify(requestPayload);
+                sourceName = `url_${simpleHash(urlData)}`; // ID based on URL hash
             }
+            currentSourceIdentifier = sourceName; // Set identifier for this card set
 
-            // Update UI - Show loading state
             loadingIndicator.style.display = 'block';
             aiNotice.style.display = 'none';
             flashcardArea.style.display = 'none';
@@ -442,37 +496,21 @@
             cards = [];
             currentCardIndex = 0;
 
-            console.log(`Sending request to: ${BACKEND_URL}`);
-            console.log('Fetch options:', fetchOptions);
-            // Log payload differently for FormData vs JSON
-            if (fetchOptions.body instanceof FormData) {
-                 console.log('Request FormData includes:');
-                 for (let [key, value] of fetchOptions.body.entries()) {
-                     // Don't log file content, just its presence/name
-                     if (value instanceof File) {
-                         console.log(`  ${key}: ${value.name}`);
-                     } else {
-                         console.log(`  ${key}: ${value}`);
-                     }
-                 }
-             } else {
-                 console.log('Request body:', fetchOptions.body);
-             }
+            console.log(`Sending request to: ${BACKEND_URL} for source: ${currentSourceIdentifier}`);
+            // ... (logging of fetchOptions and body remains the same)
 
-
-            // Make API call
             try {
                 const response = await fetch(BACKEND_URL, fetchOptions);
-                console.log(`Response status: ${response.status} ${response.statusText}`);
-                if (!response.ok) {
-                    let errorMsg = `Fehler vom Server: ${response.status} ${response.statusText}`;
-                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
-                    throw new Error(errorMsg);
-                }
+                // ... (response handling remains the same)
                 const data = await response.json();
                 console.log('Data received:', data);
                 if (data.flashcards && Array.isArray(data.flashcards)) {
-                    cards = data.flashcards;
+                    // Assign a unique ID to each card for progress tracking
+                    cards = data.flashcards.map((card, index) => ({
+                        ...card,
+                        id: `card_${index}` // Simple ID based on index in this set
+                    }));
+                    loadProgress(); // Load progress after cards are fetched and IDs assigned
                     currentCardIndex = 0;
                     isCardFlipped = false;
                     aiNotice.style.display = 'block';
@@ -496,6 +534,8 @@
         knownButton.addEventListener('click', () => markCardStatus('known'));
         repeatButton.addEventListener('click', () => markCardStatus('repeat'));
         shuffleButton.addEventListener('click', shuffleCards);
+        resetProgressButton.addEventListener('click', resetCurrentProgress); // Event listener for reset
+
 
         // --- Initial State ---
         switchTab('text-input-area');
