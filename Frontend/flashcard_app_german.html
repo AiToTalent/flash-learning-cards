@@ -3,103 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KI Lernkarten App (Lernfortschritt speichern)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>KI Lernkarten App (Lernfortschritt speichern)</title> <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-image: linear-gradient(to top, #f3e8ff, #e9d5ff);
+            /* Subtle gradient background */
+            background-image: linear-gradient(to top, #f3e8ff, #e9d5ff); /* Light purple gradient */
         }
 
-        /* Flashcard styles */
+        /* Custom styles for flashcard flip */
         .flashcard-container {
             perspective: 1000px;
-            min-height: 250px;
+            min-height: 250px; /* Slightly increased height */
             position: relative;
             transition: box-shadow 0.3s ease-in-out;
         }
-        .flashcard-container.feedback-known { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); }
-        .flashcard-container.feedback-repeat { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); }
-
+        /* Feedback Status indicator styles (temporary shadow) */
+        .flashcard-container.feedback-known {
+             box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); /* Slightly stronger green shadow */
+        }
+        .flashcard-container.feedback-repeat {
+             box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); /* Slightly stronger red shadow */
+        }
         .flashcard {
-            width: 100%; height: 100%; position: relative;
+            width: 100%;
+            height: 100%;
+            position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1); /* Smoother flip animation */
             cursor: pointer;
         }
-        .flashcard.is-flipped { transform: rotateY(180deg); }
-
-        .flashcard-face {
-            position: absolute; width: 100%; height: 100%;
-            backface-visibility: hidden;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            padding: 2rem; border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            font-family: 'Inter', sans-serif; text-align: center;
-            border: 1px solid rgba(0,0,0,0.05);
-            /* For persistent status indicators */
-            position: relative; /* To position the status icon */
+        .flashcard.is-flipped {
+            transform: rotateY(180deg);
         }
-        .flashcard-front { background-color: #ffffff; color: #1f2937; }
-        .flashcard-back { background-color: #f5f3ff; color: #5b21b6; transform: rotateY(180deg); }
+        .flashcard-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column; /* Allow text to wrap better */
+            justify-content: center;
+            align-items: center;
+            padding: 2rem; /* Increased padding */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* shadow-lg */
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.05); /* Subtle border */
+            position: relative; /* For persistent status icon */
+        }
+        .flashcard-front {
+            background-color: #ffffff;
+            color: #1f2937; /* text-gray-800 */
+        }
+        .flashcard-back {
+            background-color: #f5f3ff; /* Lighter purple background */
+            color: #5b21b6; /* Darker purple text */
+            transform: rotateY(180deg);
+        }
 
         /* Persistent Status Icon on Card */
         .status-icon {
             position: absolute;
             top: 10px;
             right: 10px;
-            width: 20px;
-            height: 20px;
+            width: 24px; /* Slightly larger icon */
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 0.8rem; /* Smaller font for icon text */
             font-weight: bold;
             color: white;
+            z-index: 10; /* Ensure it's above card content */
         }
         .status-icon-known { background-color: rgba(34, 197, 94, 0.8); /* Green */ }
         .status-icon-repeat { background-color: rgba(239, 68, 68, 0.8); /* Red */ }
 
 
-        /* Button styles */
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        /* Basic styling for disabled buttons */
+        button:disabled {
+            opacity: 0.6; /* Slightly more visible when disabled */
+            cursor: not-allowed;
+        }
+        /* General button hover/active states */
         button:not(:disabled) {
             transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
         }
         button:not(:disabled):hover {
-            transform: scale(1.03);
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transform: scale(1.03); /* Slight scale on hover */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
         }
-        button:not(:disabled):active { transform: scale(0.98); }
+         button:not(:disabled):active {
+            transform: scale(0.98); /* Slight shrink on click */
+        }
 
-        /* Tab styles */
+        /* Styling for active/inactive tabs */
         .tab-button {
-            padding: 0.6rem 1.2rem; border-radius: 0.5rem; cursor: pointer;
+            padding: 0.6rem 1.2rem; /* Slightly larger padding */
+            border-radius: 0.5rem; /* rounded-lg */
+            cursor: pointer;
             transition: all 0.2s ease-in-out;
-            border-bottom: 3px solid transparent; margin-bottom: -1px; font-weight: 500;
+            border-bottom: 3px solid transparent; /* Space for active indicator */
+            margin-bottom: -1px; /* Overlap border-bottom */
+            font-weight: 500; /* medium */
         }
-        .tab-button.active { background-color: transparent; color: #4f46e5; border-bottom-color: #4f46e5; }
-        .tab-button:not(.active) { background-color: transparent; color: #6b7280; border-color: transparent; }
-        .tab-button:not(.active):hover { background-color: #f3f4f6; color: #374151; }
+        .tab-button.active {
+            background-color: transparent; /* No background for active tab */
+            color: #4f46e5; /* text-indigo-600 */
+            border-bottom-color: #4f46e5; /* Indigo border bottom */
+        }
+        .tab-button:not(.active) {
+            background-color: transparent;
+            color: #6b7280; /* text-gray-500 */
+            border-color: transparent;
+        }
+         .tab-button:not(.active):hover {
+             background-color: #f3f4f6; /* bg-gray-100 */
+             color: #374151; /* text-gray-700 */
+         }
+
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Error message */
+        /* Error message styling */
         .error-message {
-            color: #991b1b; background-color: #fee2e2; border: 1px solid #fca5a5;
-            padding: 0.75rem 1rem; border-radius: 0.5rem; margin-top: 1rem;
-            text-align: center; font-size: 0.875rem; font-weight: 500;
+            color: #991b1b; /* dark red */
+            background-color: #fee2e2;
+            border: 1px solid #fca5a5; /* lighter red border */
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
         }
-        /* Loader */
+        /* Loading Spinner */
         .loader {
-            border: 4px solid #e5e7eb; border-top: 4px solid #4f46e5;
-            border-radius: 50%; width: 28px; height: 28px;
-            animation: spin 1s linear infinite; margin: 8px auto 0;
+            border: 4px solid #e5e7eb; /* gray-200 */
+            border-top: 4px solid #4f46e5; /* Indigo */
+            border-radius: 50%;
+            width: 28px; /* Slightly larger */
+            height: 28px;
+            animation: spin 1s linear infinite;
+            margin: 8px auto 0; /* Increased top margin */
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-50 via-white to-sky-50 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
@@ -161,7 +218,7 @@
                         <span id="card-front-text">Frage wird hier angezeigt</span>
                     </div>
                     <div class="flashcard-face flashcard-back text-lg md:text-xl">
-                         <div id="card-status-icon-back" class="status-icon" style="display: none;"></div>
+                        <div id="card-status-icon-back" class="status-icon" style="display: none;"></div>
                         <span id="card-back-text">Antwort wird hier angezeigt</span>
                     </div>
                 </div>
@@ -197,7 +254,7 @@
                      Wusste ich
                  </button>
             </div>
-             <div class="text-center mt-6">
+            <div class="text-center mt-6">
                 <button id="reset-progress-button" class="text-xs text-gray-500 hover:text-gray-700 hover:underline disabled:text-gray-300" disabled>
                     Lernfortschritt zurücksetzen
                 </button>
@@ -224,8 +281,8 @@
         const flashcard = document.getElementById('flashcard');
         const cardFrontText = document.getElementById('card-front-text');
         const cardBackText = document.getElementById('card-back-text');
-        const cardStatusIconFront = document.getElementById('card-status-icon-front');
-        const cardStatusIconBack = document.getElementById('card-status-icon-back');
+        const cardStatusIconFront = document.getElementById('card-status-icon-front'); // Added
+        const cardStatusIconBack = document.getElementById('card-status-icon-back');   // Added
         const prevButton = document.getElementById('prev-button');
         const nextButton = document.getElementById('next-button');
         const cardCounter = document.getElementById('card-counter');
@@ -237,20 +294,20 @@
         const repeatButton = document.getElementById('repeat-button');
         const shuffleButton = document.getElementById('shuffle-button');
         const maxCardsInput = document.getElementById('max-cards-input');
-        const resetProgressButton = document.getElementById('reset-progress-button'); // New button
+        const resetProgressButton = document.getElementById('reset-progress-button'); // Added
 
 
         // --- Configuration ---
         const BACKEND_URL = '/api/generate'; // For production on Render
-        const LOCAL_STORAGE_KEY_PREFIX = 'flashcardProgress_'; // Prefix for localStorage keys
-        let currentSourceIdentifier = ''; // To identify the current set of cards (e.g., based on input text hash or filename)
+        const LOCAL_STORAGE_KEY_PREFIX = 'flashcardProgress_'; // Added
+        let currentSourceIdentifier = ''; // Added
 
         // --- State ---
-        let cards = []; // Holds { id: string, front: string, back: string, status?: 'known' | 'repeat' }
+        let cards = [];
         let currentCardIndex = 0;
         let isCardFlipped = false;
         let activeTab = 'text';
-        let cardFeedbackTimeout = null;
+        let cardFeedbackTimeout = null; // Renamed from cardStatusTimeout for clarity
 
         // --- Functions ---
 
@@ -274,15 +331,12 @@
             clearError();
         }
 
-        function clearCardFeedbackIndicator() {
+        function clearCardFeedbackIndicator() { // Renamed from clearCardStatusIndicator
              if (cardFeedbackTimeout) clearTimeout(cardFeedbackTimeout);
              flashcardContainer.classList.remove('feedback-known', 'feedback-repeat');
         }
 
-        /**
-         * Generates a simple hash from a string. Not cryptographically secure.
-         * Used to create a somewhat unique ID for text inputs.
-         */
+        // Added: simpleHash function
         function simpleHash(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
@@ -293,9 +347,7 @@
             return Math.abs(hash).toString(36);
         }
 
-        /**
-         * Loads progress for the current set of cards from localStorage.
-         */
+        // Added: loadProgress function
         function loadProgress() {
             if (!currentSourceIdentifier) return;
             const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
@@ -310,9 +362,7 @@
             }
         }
 
-        /**
-         * Saves the progress for the current set of cards to localStorage.
-         */
+        // Added: saveProgress function
         function saveProgress() {
             if (!currentSourceIdentifier || cards.length === 0) return;
             const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
@@ -325,17 +375,15 @@
             if (Object.keys(progressToSave).length > 0) {
                 localStorage.setItem(key, JSON.stringify(progressToSave));
             } else {
-                localStorage.removeItem(key); // Remove if no progress to save
+                localStorage.removeItem(key);
             }
         }
 
-        /**
-         * Updates the persistent status icon on the card.
-         */
+        // Added: updatePersistentStatusIcon function
         function updatePersistentStatusIcon(card) {
             [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => {
                 iconEl.style.display = 'none';
-                iconEl.className = 'status-icon'; // Reset classes
+                iconEl.className = 'status-icon';
                 if (card && card.status) {
                     iconEl.style.display = 'flex';
                     if (card.status === 'known') {
@@ -348,7 +396,6 @@
                 }
             });
         }
-
 
         function displayCard(index = currentCardIndex) {
             clearCardFeedbackIndicator();
@@ -389,7 +436,7 @@
              knownButton.disabled = !hasCards;
              repeatButton.disabled = !hasCards;
              shuffleButton.disabled = !hasMultipleCards;
-             resetProgressButton.disabled = !hasCards; // Enable if cards are present
+             resetProgressButton.disabled = !hasCards; // Added
         }
 
         function flipCard() {
@@ -408,14 +455,13 @@
             }
         }
 
-        function markCardStatus(status) {
+        function markCardStatus(status) { // Modified
              if (cards.length === 0) return;
              clearCardFeedbackIndicator();
              flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat');
 
-             // Update card object status and save
              cards[currentCardIndex].status = status;
-             updatePersistentStatusIcon(cards[currentCardIndex]); // Update icon immediately
+             updatePersistentStatusIcon(cards[currentCardIndex]);
              saveProgress();
 
              cardFeedbackTimeout = setTimeout(() => {
@@ -435,17 +481,14 @@
             displayCard(0);
         }
 
-        /**
-         * NEW: Resets the learning progress for the current set of cards.
-         */
+        // Added: resetCurrentProgress function
         function resetCurrentProgress() {
             if (!currentSourceIdentifier || cards.length === 0) return;
             const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
             localStorage.removeItem(key);
-            cards.forEach(card => delete card.status); // Remove status from card objects
+            cards.forEach(card => delete card.status);
             console.log(`Progress reset for source: ${currentSourceIdentifier}`);
-            displayCard(currentCardIndex); // Refresh current card to remove icon
-            // Optionally, provide user feedback e.g. a temporary message
+            displayCard(currentCardIndex);
         }
 
 
@@ -460,7 +503,7 @@
             let requestPayload = {};
             const maxCards = parseInt(maxCardsInput.value, 10) || 10;
 
-            let sourceName = `text_input_${simpleHash(textInput.value.substring(0,100))}`; // Default for text
+            let sourceName = `text_input_temp`; // Default
 
             if (activeTab === 'text') {
                 const textData = textInput.value;
@@ -468,7 +511,7 @@
                 fetchOptions.headers = { 'Content-Type': 'application/json' };
                 requestPayload = { inputType: 'text', textData: textData, maxCards: maxCards };
                 fetchOptions.body = JSON.stringify(requestPayload);
-                sourceName = `text_${simpleHash(textData.substring(0, 200))}`; // More specific ID for text
+                sourceName = `text_${simpleHash(textData.substring(0, 200))}`;
             } else if (activeTab === 'file') {
                 const file = fileInput.files[0];
                 if (!file) { displayError("Bitte wähle eine Datei aus."); return; }
@@ -477,16 +520,16 @@
                 formData.append('inputFile', file);
                 formData.append('maxCards', maxCards);
                 fetchOptions.body = formData;
-                sourceName = `file_${file.name}_${file.size}`; // ID based on filename and size
+                sourceName = `file_${file.name}_${file.size}`;
             } else if (activeTab === 'url') {
                 const urlData = urlInput.value;
                 if (!urlData.trim() || !urlData.startsWith('http')) { displayError("Bitte gib eine gültige URL ein."); return; }
                 fetchOptions.headers = { 'Content-Type': 'application/json' };
                 requestPayload = { inputType: 'url', urlData: urlData, maxCards: maxCards };
                 fetchOptions.body = JSON.stringify(requestPayload);
-                sourceName = `url_${simpleHash(urlData)}`; // ID based on URL hash
+                sourceName = `url_${simpleHash(urlData)}`;
             }
-            currentSourceIdentifier = sourceName; // Set identifier for this card set
+            currentSourceIdentifier = sourceName; // Set identifier
 
             loadingIndicator.style.display = 'block';
             aiNotice.style.display = 'none';
@@ -505,12 +548,11 @@
                 const data = await response.json();
                 console.log('Data received:', data);
                 if (data.flashcards && Array.isArray(data.flashcards)) {
-                    // Assign a unique ID to each card for progress tracking
-                    cards = data.flashcards.map((card, index) => ({
+                    cards = data.flashcards.map((card, index) => ({ // Assign IDs
                         ...card,
-                        id: `card_${index}` // Simple ID based on index in this set
+                        id: `card_${index}`
                     }));
-                    loadProgress(); // Load progress after cards are fetched and IDs assigned
+                    loadProgress(); // Load progress for this set
                     currentCardIndex = 0;
                     isCardFlipped = false;
                     aiNotice.style.display = 'block';
@@ -534,7 +576,7 @@
         knownButton.addEventListener('click', () => markCardStatus('known'));
         repeatButton.addEventListener('click', () => markCardStatus('repeat'));
         shuffleButton.addEventListener('click', shuffleCards);
-        resetProgressButton.addEventListener('click', resetCurrentProgress); // Event listener for reset
+        resetProgressButton.addEventListener('click', resetCurrentProgress); // Added
 
 
         // --- Initial State ---
