@@ -7,6 +7,7 @@ const pdf = require('pdf-parse');
 const cheerio = require('cheerio');
 const mammoth = require("mammoth");
 const path = require('path'); // Ensure path is imported
+const fs = require('fs'); // Import fs for checking directory existence
 
 // Import Google Generative AI and dotenv
 require('dotenv').config();
@@ -18,17 +19,12 @@ const app = express();
 
 // Configure Gemini
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-if (!GEMINI_API_KEY) {
-    console.error("FATAL ERROR: GEMINI_API_KEY is not defined in your .env file.");
-    // Don't exit immediately in production, maybe allow frontend to load partially
-    // process.exit(1);
-}
 let genAI, model;
-if (GEMINI_API_KEY) {
+if (!GEMINI_API_KEY) {
+    console.warn("WARNUNG: GEMINI_API_KEY ist nicht definiert. Die KI-Funktionen sind deaktiviert.");
+} else {
     genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-} else {
-    console.warn("WARNUNG: GEMINI_API_KEY nicht gefunden. KI-Funktionen sind deaktiviert.");
 }
 
 
@@ -71,7 +67,7 @@ const upload = multer({
     }
 });
 
-// --- Text Extraction Function --- (No changes needed here)
+// --- Text Extraction Function ---
 async function extractText(inputType, data) {
     console.log(`Attempting to extract text from type: ${inputType}`);
 
@@ -156,8 +152,8 @@ async function extractText(inputType, data) {
 
             const htmlContent = response.data;
             const $ = cheerio.load(htmlContent);
-            $('script, style, noscript, iframe, header, footer, nav, aside, form, [aria-hidden="true"]').remove(); // Added more non-content tags
-            let text = $('main').text() || $('article').text() || $('.content').text() || $('.post-content').text() || $('body').text(); // Added common content class selectors
+            $('script, style, noscript, iframe, header, footer, nav, aside, form, [aria-hidden="true"]').remove();
+            let text = $('main').text() || $('article').text() || $('.content').text() || $('.post-content').text() || $('body').text();
             text = text.replace(/\s\s+/g, ' ').trim();
             console.log(`Extracted ${text.length} characters from URL.`);
 
@@ -187,20 +183,12 @@ async function extractText(inputType, data) {
     }
 }
 
-
-/**
- * Generates flashcards using the Google Gemini API.
- * @param {string} textContent - The text to generate flashcards from.
- * @param {number} maxCards - Maximum number of flashcards to generate (default 15).
- * @returns {Promise<Array<object>>} - A promise resolving to an array of flashcard objects.
- */
+// --- AI Flashcard Generation Function ---
 async function generateFlashcardsAI(textContent, maxCards = 15) {
-    // Check if Gemini client is initialized (API key was present)
     if (!genAI || !model) {
         console.error("Gemini API client not initialized. Cannot generate cards.");
         throw new Error("KI-Dienst ist nicht verfügbar (API-Schlüssel fehlt?).");
     }
-
     console.log(`Calling Google Gemini API for flashcard generation (max ${maxCards} cards)...`);
     const numCards = Math.max(3, Math.min(25, maxCards));
     console.log(`Requesting ${numCards} cards from AI.`);
@@ -209,69 +197,53 @@ async function generateFlashcardsAI(textContent, maxCards = 15) {
         console.log("Text content too short or empty, returning example cards.");
         return [{ front: "Kein Inhalt?", back: "Es wurde kein ausreichender Textinhalt für die Generierung gefunden oder der Inhalt war zu kurz." }];
     }
-
     const MAX_TEXT_LENGTH = 25000;
     const truncatedText = textContent.substring(0, MAX_TEXT_LENGTH);
     if(textContent.length > MAX_TEXT_LENGTH) {
         console.warn(`Text content truncated to ${MAX_TEXT_LENGTH} characters for API call.`);
     }
-
     const prompt = `
         Erstelle Lernkarten (Flashcards) basierend auf dem folgenden Text.
         Jede Lernkarte sollte eine klare Frage (front) und eine prägnante Antwort (back) haben, die direkt aus dem Text abgeleitet sind oder diesen zusammenfassen.
         Gib das Ergebnis ausschließlich als JSON-Array zurück, wobei jedes Objekt im Array eine Lernkarte darstellt und die Struktur {"front": "Frage hier", "back": "Antwort hier"} hat.
         WICHTIG: Die Werte für "front" und "back" müssen gültige JSON-Strings sein und dürfen keine unmaskierten Zeilenumbrüche enthalten. Sie sollten als einzelne Textzeile formatiert sein.
         Erstelle maximal ${numCards} Lernkarten. Gib NUR das JSON-Array zurück, ohne einleitenden Text oder Erklärungen.
-
-        Text:
-        ---
-        ${truncatedText}
-        ---
-
-        JSON-Array:
+        Text: --- ${truncatedText} --- JSON-Array:
     `;
-
     try {
         const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig,
-            safetySettings,
+            generationConfig, safetySettings,
         });
-
         const response = result.response;
         console.log("Gemini API response received.");
-
-         if (!response || !response.candidates || response.candidates.length === 0 || !response.candidates[0].content) {
-             const blockReason = response?.promptFeedback?.blockReason;
-             const finishReason = response?.candidates?.[0]?.finishReason;
-             console.warn(`Gemini response blocked or empty. Block Reason: ${blockReason}, Finish Reason: ${finishReason}`);
-             throw new Error(`Keine gültige Antwort von der KI erhalten.${blockReason ? ` Grund: ${blockReason}` : ''}${finishReason ? ` Status: ${finishReason}` : ''}`);
-         }
-
+        if (!response || !response.candidates || response.candidates.length === 0 || !response.candidates[0].content) {
+            const blockReason = response?.promptFeedback?.blockReason;
+            const finishReason = response?.candidates?.[0]?.finishReason;
+            console.warn(`Gemini response blocked or empty. Block Reason: ${blockReason}, Finish Reason: ${finishReason}`);
+            throw new Error(`Keine gültige Antwort von der KI erhalten.${blockReason ? ` Grund: ${blockReason}` : ''}${finishReason ? ` Status: ${finishReason}` : ''}`);
+        }
         const aiTextResponse = response.candidates[0].content.parts[0].text;
         console.log("Raw AI text response sample:", aiTextResponse.substring(0, 500) + "...");
-
         try {
-             const startIndex = aiTextResponse.indexOf('[');
-             const endIndex = aiTextResponse.lastIndexOf(']');
-             console.log(`Found startIndex '[' at: ${startIndex}`);
-             console.log(`Found endIndex ']' at: ${endIndex}`);
-
-             if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-                 console.error("Could not find valid JSON array structure ([...]) in AI response. Check startIndex and endIndex values above.");
-                 throw new Error("Die KI-Antwort enthielt keine gültige Lernkartenstruktur.");
-             }
-             const jsonString = aiTextResponse.substring(startIndex, endIndex + 1);
-             console.log("Extracted JSON string for parsing:", jsonString.substring(0, 500) + "...");
-
+            const startIndex = aiTextResponse.indexOf('[');
+            const endIndex = aiTextResponse.lastIndexOf(']');
+            console.log(`Found startIndex '[' at: ${startIndex}`);
+            console.log(`Found endIndex ']' at: ${endIndex}`);
+            if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+                console.error("Could not find valid JSON array structure ([...]) in AI response.");
+                throw new Error("Die KI-Antwort enthielt keine gültige Lernkartenstruktur.");
+            }
+            const jsonString = aiTextResponse.substring(startIndex, endIndex + 1);
+            console.log("Extracted JSON string for parsing:", jsonString.substring(0, 500) + "...");
             const flashcards = JSON.parse(jsonString);
             if (!Array.isArray(flashcards)) {
-                 console.error("Parsed result is not an array.");
-                 throw new Error("AI response was not a valid JSON array after parsing.");
+                console.error("Parsed result is not an array.");
+                throw new Error("AI response was not a valid JSON array after parsing.");
             }
-             if (flashcards.length > 0 && (typeof flashcards[0].front !== 'string' || typeof flashcards[0].back !== 'string')) {
-                  console.warn("Parsed array elements might not have the correct {front: string, back: string} structure.");
-             }
+            if (flashcards.length > 0 && (typeof flashcards[0].front !== 'string' || typeof flashcards[0].back !== 'string')) {
+                 console.warn("Parsed array elements might not have the correct {front: string, back: string} structure.");
+            }
             console.log(`Successfully parsed ${flashcards.length} flashcards from AI response.`);
             return flashcards.slice(0, numCards);
         } catch (parseError) {
@@ -286,9 +258,7 @@ async function generateFlashcardsAI(textContent, maxCards = 15) {
     }
 }
 
-
 // --- API Routes ---
-
 function handleMulterError(err, req, res, next) {
   if (err instanceof multer.MulterError) {
     console.error("Multer error:", err);
@@ -296,95 +266,108 @@ function handleMulterError(err, req, res, next) {
   } else if (err) {
      console.error("File filter error:", err);
      res.status(400).json({ error: err.message || "Fehler beim Datei-Upload." });
-  } else {
-    next();
-  }
+  } else { next(); }
 }
 
-// API endpoint for generating flashcards
 app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (req, res) => {
     const inputType = req.body.inputType;
     let data;
     const maxCards = parseInt(req.body.maxCards) || 15;
     console.log(`Max cards requested by client: ${maxCards}`);
-
     console.log(`Received request for input type: ${inputType}`);
     try {
         if (inputType === 'text') {
             data = req.body.textData;
-             if (!data || data.trim() === '') throw new Error('Kein Textinhalt übermittelt.');
+            if (!data || data.trim() === '') throw new Error('Kein Textinhalt übermittelt.');
         } else if (inputType === 'file') {
             if (!req.file) throw new Error('Keine Datei hochgeladen oder Datei wurde abgelehnt.');
             data = req.file;
             console.log(`Processing uploaded file: ${data.originalname} (${data.size} bytes)`);
         } else if (inputType === 'url') {
             data = req.body.urlData;
-             if (!data || data.trim() === '') throw new Error('Keine URL übermittelt.');
+            if (!data || data.trim() === '') throw new Error('Keine URL übermittelt.');
         } else {
             return res.status(400).json({ error: 'Ungültiger Eingabetyp spezifiziert.' });
         }
-
         const textContent = await extractText(inputType, data);
         const flashcards = await generateFlashcardsAI(textContent, maxCards);
         res.json({ flashcards: flashcards });
-
     } catch (error) {
         console.error("Error in /api/generate route:", error);
         res.status(500).json({ error: error.message || 'Interner Serverfehler beim Generieren der Lernkarten.' });
     }
 });
 
-
 // --- Static File Serving & Catch-all Route ---
-// Determine the correct path to the 'frontend' directory
-// Assumes 'frontend' is a sibling to 'Backend' where server.js resides
-const frontendPath = path.resolve(__dirname, '..', 'Frontend'); // Use path.resolve for absolute path
-console.log(`Attempting to serve static files from: ${frontendPath}`);
+const frontendPath = path.resolve(__dirname, '..', 'Frontend');
+console.log(`[STATIC] Attempting to serve static files from: ${frontendPath}`);
 
-// Check if the directory exists (for debugging)
-const fs = require('fs');
 if (fs.existsSync(frontendPath)) {
-    console.log(`Directory ${frontendPath} exists.`);
-    // Serve static files (like CSS, maybe future JS bundles)
-    app.use(express.static(frontendPath, {
-        // Optional: Set headers for caching, etc.
-        // index: false // Don't automatically serve index.html via static
-    }));
-    console.log(`Static file serving configured for ${frontendPath}`);
+    console.log(`[STATIC] Directory ${frontendPath} exists. Configuring express.static.`);
+    // Serve static assets (CSS, JS, images etc.) from the frontend directory
+    app.use(express.static(frontendPath));
 } else {
-    console.error(`ERROR: Directory ${frontendPath} not found! Static files will not be served.`);
+    console.error(`[STATIC] ERROR: Directory ${frontendPath} not found! Static files (CSS, etc.) will not be served.`);
 }
 
-
-// Catch-all route for serving the main HTML file
-// IMPORTANT: This MUST come AFTER all other API routes (like /api/generate)
-app.get('*', (req, res) => {
-  // Log incoming request path for debugging
-  console.log(`Catch-all route triggered for path: ${req.path}`);
+// Explicitly serve flashcard_app_german.html for the root path
+app.get('/', (req, res) => {
+  console.log(`[ROUTE /] Request received for root path.`);
   const htmlFilePath = path.join(frontendPath, 'flashcard_app_german.html');
-  console.log(`Attempting to send file: ${htmlFilePath}`);
-
+  console.log(`[ROUTE /] Attempting to send file: ${htmlFilePath}`);
   res.sendFile(htmlFilePath, (err) => {
     if (err) {
-      console.error(`Error sending file ${htmlFilePath}:`, err);
-      // Send a more informative error if file not found
-      if (err.code === 'ENOENT') {
-           res.status(404).send(`Cannot GET ${req.path} - HTML file not found.`);
-      } else {
-           res.status(500).send("Internal server error: Could not load the application.");
+      console.error(`[ROUTE /] Error sending file ${htmlFilePath}:`, err);
+      if (!res.headersSent) { // Check if headers were already sent
+          if (err.code === 'ENOENT') {
+               res.status(404).send(`Haupt-HTML-Datei nicht gefunden unter ${htmlFilePath}.`);
+          } else {
+               res.status(500).send("Interner Serverfehler beim Laden der Anwendung.");
+          }
       }
     } else {
-         console.log(`Successfully sent file: ${htmlFilePath}`);
+      console.log(`[ROUTE /] Successfully sent file: ${htmlFilePath}`);
     }
   });
 });
 
+// Catch-all route for any other GET request.
+// This should serve your main HTML file to support client-side routing (if you add it later)
+// or to handle direct access to non-API paths.
+// IMPORTANT: This must be one of the LAST routes.
+app.get('*', (req, res) => {
+  console.log(`[CATCH-ALL *] Route triggered for path: ${req.path}`);
+  // If the request is for an API path but wasn't caught by other API handlers,
+  // it shouldn't serve HTML. Check if it's an API-like path.
+  if (req.path.startsWith('/api/')) {
+    console.log(`[CATCH-ALL *] Path ${req.path} looks like an API call but was not handled. Sending 404.`);
+    return res.status(404).send(`API-Endpunkt nicht gefunden: ${req.path}`);
+  }
+
+  const htmlFilePath = path.join(frontendPath, 'flashcard_app_german.html');
+  console.log(`[CATCH-ALL *] Attempting to send main HTML file: ${htmlFilePath}`);
+  res.sendFile(htmlFilePath, (err) => {
+    if (err) {
+      console.error(`[CATCH-ALL *] Error sending file ${htmlFilePath} for path ${req.path}:`, err);
+      if (!res.headersSent) {
+          // It's a catch-all, so if the main HTML file itself is missing, that's a server config issue.
+          // Otherwise, for other paths, it's a client-side 404.
+          if (err.code === 'ENOENT') {
+              res.status(500).send("Fehler: Hauptanwendungsdatei nicht gefunden auf dem Server.");
+          } else {
+              res.status(500).send("Interner Serverfehler beim Laden der Ressource.");
+          }
+      }
+    } else {
+      console.log(`[CATCH-ALL *] Successfully sent main HTML file for ${req.path}`);
+    }
+  });
+});
 
 // --- Server Startup ---
 app.listen(PORT, () => {
-    // Render injects the PORT environment variable. Use 0.0.0.0 to bind to all interfaces.
     console.log(`Backend server listening on port ${PORT}`);
-    if (!process.env.GEMINI_API_KEY) {
+    if (!GEMINI_API_KEY) { // Check if GEMINI_API_KEY was loaded
          console.warn("WARNUNG: GEMINI_API_KEY nicht gefunden. Die KI-Generierung ist möglicherweise deaktiviert oder schlägt fehl.");
      } else {
          console.log("Gemini API Key loaded successfully.");
