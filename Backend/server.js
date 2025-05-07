@@ -186,9 +186,10 @@ async function extractText(inputType, data) {
 /**
  * Generates flashcards using the Google Gemini API.
  * @param {string} textContent - The text to generate flashcards from.
+ * @param {number} maxCards - Maximum number of flashcards to generate (default 15).
  * @returns {Promise<Array<object>>} - A promise resolving to an array of flashcard objects.
  */
-async function generateFlashcardsAI(textContent) {
+async function generateFlashcardsAI(textContent, maxCards = 15) {
     console.log("Calling Google Gemini API for flashcard generation...");
 
     if (!textContent || textContent.trim().length < 10) {
@@ -207,7 +208,7 @@ async function generateFlashcardsAI(textContent) {
         Jede Lernkarte sollte eine klare Frage (front) und eine prägnante Antwort (back) haben, die direkt aus dem Text abgeleitet sind oder diesen zusammenfassen.
         Gib das Ergebnis ausschließlich als JSON-Array zurück, wobei jedes Objekt im Array eine Lernkarte darstellt und die Struktur {"front": "Frage hier", "back": "Antwort hier"} hat.
         WICHTIG: Die Werte für "front" und "back" müssen gültige JSON-Strings sein und dürfen keine unmaskierten Zeilenumbrüche enthalten. Sie sollten als einzelne Textzeile formatiert sein.
-        Erstelle maximal 15 Lernkarten. Gib NUR das JSON-Array zurück, ohne einleitenden Text oder Erklärungen.
+        Erstelle maximal ${maxCards} Lernkarten. Gib NUR das JSON-Array zurück, ohne einleitenden Text oder Erklärungen.
 
         Text:
         ---
@@ -261,7 +262,7 @@ async function generateFlashcardsAI(textContent) {
             if (!Array.isArray(flashcards)) {
                  console.error("Parsed result is not an array.");
                  throw new Error("AI response was not a valid JSON array after parsing.");
-             }
+            }
              if (flashcards.length > 0 && (typeof flashcards[0].front !== 'string' || typeof flashcards[0].back !== 'string')) {
                   console.warn("Parsed array elements might not have the correct {front: string, back: string} structure.");
              }
@@ -316,11 +317,14 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
             return res.status(400).json({ error: 'Ungültiger Eingabetyp spezifiziert.' });
         }
 
+        // Get maxCards from request, default to 15
+        const maxCards = parseInt(req.body.maxCards) || 15;
+
         // 1. Extract text content (Handles TXT, PDF, DOCX, URL)
         const textContent = await extractText(inputType, data);
 
         // 2. Generate flashcards using AI
-        const flashcards = await generateFlashcardsAI(textContent);
+        const flashcards = await generateFlashcardsAI(textContent, maxCards);
 
         // 3. Send the generated flashcards back to the frontend
         res.json({ flashcards: flashcards });
@@ -335,11 +339,11 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
 const path = require('path');
 
 // Statischen Ordner für das Frontend bereitstellen
-app.use(express.static(path.join(__dirname, '..', 'Frontend')));
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // Bei Aufruf der Startseite automatisch flashcard_app_german.html liefern
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'Frontend', 'flashcard_app_german.html'));
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'flashcard_app_german.html'));
 });
 
 // --- Server Startup ---
