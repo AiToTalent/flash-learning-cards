@@ -338,7 +338,7 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
 // --- Static File Serving & Catch-all Route ---
 // Determine the correct path to the 'frontend' directory
 // Assumes 'frontend' is a sibling to 'Backend' where server.js resides
-const frontendPath = path.resolve(__dirname, '..', 'frontend'); // Use path.resolve for absolute path
+const frontendPath = path.resolve(__dirname, '..', 'Frontend'); // Use path.resolve for absolute path
 console.log(`Attempting to serve static files from: ${frontendPath}`);
 
 // Check if the directory exists (for debugging)
