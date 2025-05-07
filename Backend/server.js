@@ -25,8 +25,8 @@ if (!GEMINI_API_KEY) {
 } else {
     try {
         genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        // --- UPDATED MODEL NAME ---
-        const modelName = "gemini-2.5-pro-preview-05-06"; // Use the user suggested preview model name
+        // --- UPDATED MODEL NAME based on Google Error Message ---
+        const modelName = "gemini-2.5-pro-exp-03-25"; // Use the suggested experimental model
         modelFlashcard = genAI.getGenerativeModel({ model: modelName });
         modelQuiz = genAI.getGenerativeModel({ model: modelName });
         console.log(`Gemini API Client initialisiert mit Modell: ${modelName}`);
