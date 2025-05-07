@@ -22,7 +22,7 @@ if (!GEMINI_API_KEY) {
     process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Reverted to 1.5-flash for stability, can change back if needed
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 const generationConfig = {
     temperature: 0.7,
@@ -155,14 +155,21 @@ async function extractText(inputType, data) {
 
             const htmlContent = response.data;
             const $ = cheerio.load(htmlContent);
-            $('script, style, noscript, iframe, header, footer, nav').remove();
-            let text = $('main').text() || $('article').text() || $('body').text();
+            $('script, style, noscript, iframe, header, footer, nav, aside, form, [aria-hidden="true"]').remove(); // Added more non-content tags
+            let text = $('main').text() || $('article').text() || $('.content').text() || $('.post-content').text() || $('body').text(); // Added common content class selectors
             text = text.replace(/\s\s+/g, ' ').trim();
             console.log(`Extracted ${text.length} characters from URL.`);
+
+            // --- UPDATED: Warning for very short text ---
             if (text.length === 0) {
-                 console.warn("Extracted text from URL is empty. The page might use JavaScript rendering heavily.");
-                 return Promise.resolve("[Kein Textinhalt von URL extrahiert. Möglicherweise JavaScript-Rendering erforderlich.]");
+                 console.warn("Extracted text from URL is empty. The page might use JavaScript rendering heavily or have no parsable text content.");
+                 return Promise.resolve("[Kein Textinhalt von URL extrahiert. Möglicherweise JavaScript-Rendering oder keine Textinhalte.]");
+            } else if (text.length > 0 && text.length < 150) { // Threshold for "very short"
+                 console.warn(`Extracted text from URL is very short (${text.length} chars). Content might be incomplete or the page uses heavy JavaScript rendering.`);
+                 // We still return the short text for the AI to attempt processing
             }
+            // --- END OF UPDATE ---
+
             return Promise.resolve(text);
 
         } catch (error) {
@@ -190,11 +197,13 @@ async function extractText(inputType, data) {
  * @returns {Promise<Array<object>>} - A promise resolving to an array of flashcard objects.
  */
 async function generateFlashcardsAI(textContent, maxCards = 15) {
-    console.log("Calling Google Gemini API for flashcard generation...");
+    console.log(`Calling Google Gemini API for flashcard generation (max ${maxCards} cards)...`);
+    const numCards = Math.max(3, Math.min(25, maxCards));
+    console.log(`Requesting ${numCards} cards from AI.`);
 
-    if (!textContent || textContent.trim().length < 10) {
+    if (!textContent || textContent.trim().length < 10) { // Increased minimum length slightly
         console.log("Text content too short or empty, returning example cards.");
-        return [{ front: "Kein Inhalt?", back: "Es wurde kein ausreichender Textinhalt für die Generierung gefunden." }];
+        return [{ front: "Kein Inhalt?", back: "Es wurde kein ausreichender Textinhalt für die Generierung gefunden oder der Inhalt war zu kurz." }];
     }
 
     const MAX_TEXT_LENGTH = 25000;
@@ -208,7 +217,7 @@ async function generateFlashcardsAI(textContent, maxCards = 15) {
         Jede Lernkarte sollte eine klare Frage (front) und eine prägnante Antwort (back) haben, die direkt aus dem Text abgeleitet sind oder diesen zusammenfassen.
         Gib das Ergebnis ausschließlich als JSON-Array zurück, wobei jedes Objekt im Array eine Lernkarte darstellt und die Struktur {"front": "Frage hier", "back": "Antwort hier"} hat.
         WICHTIG: Die Werte für "front" und "back" müssen gültige JSON-Strings sein und dürfen keine unmaskierten Zeilenumbrüche enthalten. Sie sollten als einzelne Textzeile formatiert sein.
-        Erstelle maximal ${maxCards} Lernkarten. Gib NUR das JSON-Array zurück, ohne einleitenden Text oder Erklärungen.
+        Erstelle maximal ${numCards} Lernkarten. Gib NUR das JSON-Array zurück, ohne einleitenden Text oder Erklärungen.
 
         Text:
         ---
@@ -236,15 +245,11 @@ async function generateFlashcardsAI(textContent, maxCards = 15) {
          }
 
         const aiTextResponse = response.candidates[0].content.parts[0].text;
-        console.log("Raw AI text response sample:", aiTextResponse.substring(0, 500) + "..."); // Log more of the response
+        console.log("Raw AI text response sample:", aiTextResponse.substring(0, 500) + "...");
 
-        // --- ADDED LOGGING FOR INDEXES ---
-        // Attempt to parse the JSON response from the AI
         try {
-             // More robust cleaning: Find the JSON array within the response
              const startIndex = aiTextResponse.indexOf('[');
              const endIndex = aiTextResponse.lastIndexOf(']');
-             // Log the found indexes
              console.log(`Found startIndex '[' at: ${startIndex}`);
              console.log(`Found endIndex ']' at: ${endIndex}`);
 
@@ -252,12 +257,9 @@ async function generateFlashcardsAI(textContent, maxCards = 15) {
                  console.error("Could not find valid JSON array structure ([...]) in AI response. Check startIndex and endIndex values above.");
                  throw new Error("Die KI-Antwort enthielt keine gültige Lernkartenstruktur.");
              }
-
-             // Extract the potential JSON string
              const jsonString = aiTextResponse.substring(startIndex, endIndex + 1);
-             console.log("Extracted JSON string for parsing:", jsonString.substring(0, 500) + "..."); // Log more of the extracted string
+             console.log("Extracted JSON string for parsing:", jsonString.substring(0, 500) + "...");
 
-            // Parse the extracted string
             const flashcards = JSON.parse(jsonString);
             if (!Array.isArray(flashcards)) {
                  console.error("Parsed result is not an array.");
@@ -267,13 +269,12 @@ async function generateFlashcardsAI(textContent, maxCards = 15) {
                   console.warn("Parsed array elements might not have the correct {front: string, back: string} structure.");
              }
             console.log(`Successfully parsed ${flashcards.length} flashcards from AI response.`);
-            return flashcards;
+            return flashcards.slice(0, numCards);
         } catch (parseError) {
             console.error("Failed to parse JSON from AI response:", parseError);
-            console.error("Raw response that failed parsing was:", aiTextResponse.substring(0, 1000) + "..."); // Log even more
+            console.error("Raw response that failed parsing was:", aiTextResponse.substring(0, 1000) + "...");
             throw new Error(`Konnte die Lernkarten aus der KI-Antwort nicht korrekt extrahieren. Möglicherweise ungültiges JSON von der KI: ${parseError.message}`);
         }
-        // --- END OF ADDED LOGGING ---
     } catch (error) {
         console.error("Error calling Google Gemini API or processing its response:", error);
         const message = error.status ? `${error.message} (Status: ${error.status})` : error.message;
@@ -299,6 +300,8 @@ function handleMulterError(err, req, res, next) {
 app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (req, res) => {
     const inputType = req.body.inputType;
     let data;
+    const maxCards = parseInt(req.body.maxCards) || 15; // Default to 15 if not specified
+    console.log(`Max cards requested by client: ${maxCards}`);
 
     console.log(`Received request for input type: ${inputType}`);
     try {
@@ -312,21 +315,12 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
         } else if (inputType === 'url') {
             data = req.body.urlData;
              if (!data || data.trim() === '') throw new Error('Keine URL übermittelt.');
-             // Basic URL validation could be added here
         } else {
             return res.status(400).json({ error: 'Ungültiger Eingabetyp spezifiziert.' });
         }
 
-        // Get maxCards from request, default to 15
-        const maxCards = parseInt(req.body.maxCards) || 15;
-
-        // 1. Extract text content (Handles TXT, PDF, DOCX, URL)
         const textContent = await extractText(inputType, data);
-
-        // 2. Generate flashcards using AI
         const flashcards = await generateFlashcardsAI(textContent, maxCards);
-
-        // 3. Send the generated flashcards back to the frontend
         res.json({ flashcards: flashcards });
 
     } catch (error) {
@@ -337,14 +331,20 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
 
 
 const path = require('path');
+// Serve static files from the 'frontend' directory, assuming it's one level up from 'Backend'
+const frontendPath = path.join(__dirname, '..', 'frontend'); // Adjusted path
+console.log(`Serving static files from: ${frontendPath}`);
+app.use(express.static(frontendPath));
 
-// Statischen Ordner für das Frontend bereitstellen
-app.use(express.static(path.join(__dirname, '..', 'Frontend')));
-
-// Bei Aufruf der Startseite automatisch flashcard_app_german.html liefern
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'Frontend', 'flashcard_app_german.html'));
+// Serve the main HTML file for any root or direct route requests
+app.get('/*', (req, res) => { // Catch-all for SPA-like behavior or direct access
+  res.sendFile(path.join(frontendPath, 'flashcard_app_german.html'), (err) => {
+    if (err) {
+      res.status(500).send(err);
+    }
+  });
 });
+
 
 // --- Server Startup ---
 app.listen(PORT, () => {
