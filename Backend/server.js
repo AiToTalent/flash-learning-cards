@@ -6,23 +6,31 @@ const axios = require('axios');
 const pdf = require('pdf-parse');
 const cheerio = require('cheerio');
 const mammoth = require("mammoth");
+const path = require('path'); // Ensure path is imported
 
 // Import Google Generative AI and dotenv
 require('dotenv').config();
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 
 // --- Configuration ---
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001; // Render provides the PORT env var
 const app = express();
 
 // Configure Gemini
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
     console.error("FATAL ERROR: GEMINI_API_KEY is not defined in your .env file.");
-    process.exit(1);
+    // Don't exit immediately in production, maybe allow frontend to load partially
+    // process.exit(1);
 }
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+let genAI, model;
+if (GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+} else {
+    console.warn("WARNUNG: GEMINI_API_KEY nicht gefunden. KI-Funktionen sind deaktiviert.");
+}
+
 
 const generationConfig = {
     temperature: 0.7,
@@ -63,14 +71,7 @@ const upload = multer({
     }
 });
 
-// --- Text Extraction Function ---
-
-/**
- * Extracts text content from text, txt, pdf, docx files, and URLs.
- * @param {string} inputType - 'text', 'file', or 'url'
- * @param {any} data - The input data (string, file object from multer, or URL string)
- * @returns {Promise<string>} - A promise resolving to the extracted text content.
- */
+// --- Text Extraction Function --- (No changes needed here)
 async function extractText(inputType, data) {
     console.log(`Attempting to extract text from type: ${inputType}`);
 
@@ -194,6 +195,12 @@ async function extractText(inputType, data) {
  * @returns {Promise<Array<object>>} - A promise resolving to an array of flashcard objects.
  */
 async function generateFlashcardsAI(textContent, maxCards = 15) {
+    // Check if Gemini client is initialized (API key was present)
+    if (!genAI || !model) {
+        console.error("Gemini API client not initialized. Cannot generate cards.");
+        throw new Error("KI-Dienst ist nicht verfügbar (API-Schlüssel fehlt?).");
+    }
+
     console.log(`Calling Google Gemini API for flashcard generation (max ${maxCards} cards)...`);
     const numCards = Math.max(3, Math.min(25, maxCards));
     console.log(`Requesting ${numCards} cards from AI.`);
@@ -328,23 +335,46 @@ app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (
 });
 
 
-const path = require('path');
-// Serve static files from the 'frontend' directory
-// Assumes 'frontend' is a sibling directory to the 'Backend' directory where server.js is located.
-const frontendPath = path.join(__dirname, '..', 'frontend');
-console.log(`Serving static files from: ${frontendPath}`);
-app.use(express.static(frontendPath));
+// --- Static File Serving & Catch-all Route ---
+// Determine the correct path to the 'frontend' directory
+// Assumes 'frontend' is a sibling to 'Backend' where server.js resides
+const frontendPath = path.resolve(__dirname, '..', 'frontend'); // Use path.resolve for absolute path
+console.log(`Attempting to serve static files from: ${frontendPath}`);
 
-// --- CORRECTED CATCH-ALL ROUTE ---
-// This route should come AFTER your API routes.
-// It serves the main HTML file for any non-API GET requests,
-// enabling client-side routing or direct access to the app's root.
+// Check if the directory exists (for debugging)
+const fs = require('fs');
+if (fs.existsSync(frontendPath)) {
+    console.log(`Directory ${frontendPath} exists.`);
+    // Serve static files (like CSS, maybe future JS bundles)
+    app.use(express.static(frontendPath, {
+        // Optional: Set headers for caching, etc.
+        // index: false // Don't automatically serve index.html via static
+    }));
+    console.log(`Static file serving configured for ${frontendPath}`);
+} else {
+    console.error(`ERROR: Directory ${frontendPath} not found! Static files will not be served.`);
+}
+
+
+// Catch-all route for serving the main HTML file
+// IMPORTANT: This MUST come AFTER all other API routes (like /api/generate)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'flashcard_app_german.html'), (err) => {
+  // Log incoming request path for debugging
+  console.log(`Catch-all route triggered for path: ${req.path}`);
+  const htmlFilePath = path.join(frontendPath, 'flashcard_app_german.html');
+  console.log(`Attempting to send file: ${htmlFilePath}`);
+
+  res.sendFile(htmlFilePath, (err) => {
     if (err) {
-      // Log the error and send a generic 500 status if the file can't be sent.
-      console.error("Error sending HTML file:", err);
-      res.status(500).send("Internal server error: Could not load the application.");
+      console.error(`Error sending file ${htmlFilePath}:`, err);
+      // Send a more informative error if file not found
+      if (err.code === 'ENOENT') {
+           res.status(404).send(`Cannot GET ${req.path} - HTML file not found.`);
+      } else {
+           res.status(500).send("Internal server error: Could not load the application.");
+      }
+    } else {
+         console.log(`Successfully sent file: ${htmlFilePath}`);
     }
   });
 });
@@ -352,9 +382,10 @@ app.get('*', (req, res) => {
 
 // --- Server Startup ---
 app.listen(PORT, () => {
-    console.log(`Backend server running on http://localhost:${PORT}`);
+    // Render injects the PORT environment variable. Use 0.0.0.0 to bind to all interfaces.
+    console.log(`Backend server listening on port ${PORT}`);
     if (!process.env.GEMINI_API_KEY) {
-         console.warn("WARNUNG: GEMINI_API_KEY nicht gefunden. Die KI-Generierung wird fehlschlagen.");
+         console.warn("WARNUNG: GEMINI_API_KEY nicht gefunden. Die KI-Generierung ist möglicherweise deaktiviert oder schlägt fehl.");
      } else {
          console.log("Gemini API Key loaded successfully.");
      }
