@@ -25,8 +25,8 @@ if (!GEMINI_API_KEY) {
 } else {
     try {
         genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        // --- UPDATED MODEL ---
-        const modelName = "gemini-2.5-pro-preview"; // Use the requested preview model
+        // --- UPDATED MODEL NAME ---
+        const modelName = "gemini-2.5-pro-preview-05-06"; // Use the user suggested preview model name
         modelFlashcard = genAI.getGenerativeModel({ model: modelName });
         modelQuiz = genAI.getGenerativeModel({ model: modelName });
         console.log(`Gemini API Client initialisiert mit Modell: ${modelName}`);
@@ -37,7 +37,7 @@ if (!GEMINI_API_KEY) {
     }
 }
 
-const generationConfig = { temperature: 0.6, topK: 1, topP: 1, maxOutputTokens: 4096 }; // Keep config, might need adjustment for new model
+const generationConfig = { temperature: 0.6, topK: 1, topP: 1, maxOutputTokens: 4096 };
 const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
     { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -62,7 +62,7 @@ const upload = multer({
     }
 });
 
-// --- Text Extraction Function --- (remains the same)
+// --- Text Extraction Function ---
 async function extractText(inputType, data) {
     console.log(`Attempting to extract text from type: ${inputType}`);
     if (inputType === 'text') { return Promise.resolve(data || ''); }
@@ -89,10 +89,10 @@ async function extractText(inputType, data) {
     } else { return Promise.reject(new Error('Ungültiger Input-Typ.')); }
 }
 
-// --- AI Flashcard Generation Function --- (remains the same, uses updated model variable)
+// --- AI Flashcard Generation Function ---
 async function generateFlashcardsAI(textContent, maxCards = 15) {
     if (!genAI || !modelFlashcard) { throw new Error("KI-Dienst (Flashcard) nicht verfügbar."); }
-    console.log(`Calling Gemini (${modelFlashcard.model}) for flashcards (max ${maxCards})...`); // Log model name
+    console.log(`Calling Gemini (${modelFlashcard.model}) for flashcards (max ${maxCards})...`);
     const numCards = Math.max(3, Math.min(25, maxCards));
     if (!textContent || textContent.trim().length < 10) { return [{ front: "Kein Inhalt?", back: "Text zu kurz." }]; }
     const MAX_TEXT_LENGTH = 25000; const truncatedText = textContent.substring(0, MAX_TEXT_LENGTH); if(textContent.length > MAX_TEXT_LENGTH) { console.warn(`Text truncated.`); }
@@ -112,16 +112,16 @@ async function generateFlashcardsAI(textContent, maxCards = 15) {
     } catch (error) { console.error("Gemini API error (Flashcards):", error); throw new Error(error.message || "KI-Fehler (Flashcards)."); }
 }
 
-// --- AI Quiz Generation Function --- (remains the same, uses updated model variable)
+// --- AI Quiz Generation Function ---
 async function generateQuizAI(textContent, numQuestions = 5) {
     if (!genAI || !modelQuiz) { throw new Error("KI-Dienst (Quiz) nicht verfügbar."); }
-    console.log(`Calling Gemini (${modelQuiz.model}) for quiz (${numQuestions} questions)...`); // Log model name
+    console.log(`Calling Gemini (${modelQuiz.model}) for quiz (${numQuestions} questions)...`);
     const numberOfQuestions = Math.max(3, Math.min(15, numQuestions));
     if (!textContent || textContent.trim().length < 50) { console.log("Text zu kurz für Quiz."); return []; }
     const MAX_TEXT_LENGTH = 25000; const truncatedText = textContent.substring(0, MAX_TEXT_LENGTH); if(textContent.length > MAX_TEXT_LENGTH) { console.warn(`Text truncated (Quiz).`); }
     const prompt = `Erstelle ein Multiple-Choice-Quiz... Generiere genau ${numberOfQuestions} Fragen... Struktur: {"question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndices": [index1, index2, ...]}... Text: --- ${truncatedText} --- JSON-Array mit Quizfragen:`;
     try {
-        const activeModel = modelQuiz; // Use the specific quiz model variable
+        const activeModel = modelQuiz;
         if (!activeModel) throw new Error("Kein KI-Modell für Quiz.");
         const result = await activeModel.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig, safetySettings });
         const response = result.response; console.log("Gemini response received (Quiz).");
@@ -138,21 +138,20 @@ async function generateQuizAI(textContent, numQuestions = 5) {
     } catch (error) { console.error("Gemini API error (Quiz):", error); throw new Error(error.message || "KI-Fehler (Quiz)."); }
 }
 
-
 // --- API Routes ---
-function handleMulterError(err, req, res, next) { /* ... */ if (err instanceof multer.MulterError) { res.status(400).json({ error: `Fehler beim Datei-Upload: ${err.message}` }); } else if (err) { res.status(400).json({ error: err.message || "Fehler beim Datei-Upload." }); } else { next(); } }
+function handleMulterError(err, req, res, next) { if (err instanceof multer.MulterError) { res.status(400).json({ error: `Fehler beim Datei-Upload: ${err.message}` }); } else if (err) { res.status(400).json({ error: err.message || "Fehler beim Datei-Upload." }); } else { next(); } }
 
-app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (req, res) => { /* ... (remains the same) ... */
+app.post('/api/generate', upload.single('inputFile'), handleMulterError, async (req, res) => {
     const inputType = req.body.inputType; let data; const maxCards = parseInt(req.body.maxCards) || 15; console.log(`[API /generate] Req: ${maxCards} cards, Type: ${inputType}`);
     try { if (inputType === 'text') { data = req.body.textData; if (!data?.trim()) throw new Error('Kein Text.'); } else if (inputType === 'file') { if (!req.file) throw new Error('Keine Datei.'); data = req.file; console.log(`File: ${data.originalname}`); } else if (inputType === 'url') { data = req.body.urlData; if (!data?.trim()) throw new Error('Keine URL.'); } else { return res.status(400).json({ error: 'Ungültiger Typ.' }); } const textContent = await extractText(inputType, data); const flashcards = await generateFlashcardsAI(textContent, maxCards); res.json({ flashcards: flashcards }); } catch (error) { console.error("Error in /api/generate:", error); res.status(500).json({ error: error.message || 'Serverfehler (Flashcards).' }); }
 });
 
-app.post('/api/generate-quiz', upload.single('inputFile'), handleMulterError, async (req, res) => { /* ... (remains the same) ... */
+app.post('/api/generate-quiz', upload.single('inputFile'), handleMulterError, async (req, res) => {
     console.log(`[API /generate-quiz] Handler reached for path: ${req.path}`); const inputType = req.body.inputType; let data; const numQuestions = parseInt(req.body.numQuestions) || 5; console.log(`[API /generate-quiz] Num questions requested: ${numQuestions}, Type: ${inputType}`);
     try { if (inputType === 'text') { data = req.body.textData; if (!data?.trim()) throw new Error('Kein Text.'); } else if (inputType === 'file') { if (!req.file) throw new Error('Keine Datei.'); data = req.file; console.log(`File: ${data.originalname}`); } else if (inputType === 'url') { data = req.body.urlData; if (!data?.trim()) throw new Error('Keine URL.'); } else { return res.status(400).json({ error: 'Ungültiger Typ.' }); } const textContent = await extractText(inputType, data); const quizQuestions = await generateQuizAI(textContent, numQuestions); console.log("[API /generate-quiz] Sending quiz response."); res.json({ quiz: quizQuestions }); } catch (error) { console.error("Error in /api/generate-quiz route:", error); console.log("[API /generate-quiz] Sending 500 error response."); res.status(500).json({ error: error.message || 'Serverfehler (Quiz).' }); }
 });
 
-// --- Static File Serving & Catch-all Route --- (remains the same)
+// --- Static File Serving & Catch-all Route ---
 const frontendPath = path.resolve(__dirname, '..', 'Frontend');
 console.log(`[STATIC] Base path for frontend: ${frontendPath}`);
 if (fs.existsSync(frontendPath)) {
@@ -174,7 +173,7 @@ if (fs.existsSync(frontendPath)) {
     app.get('*', (req, res) => { res.status(500).send("Server configuration error: Frontend directory not found."); });
 }
 
-// --- Server Startup --- (remains the same)
+// --- Server Startup ---
 app.listen(PORT, () => {
     console.log(`Backend server listening on port ${PORT}`);
     if (!GEMINI_API_KEY) { console.warn("WARNUNG: GEMINI_API_KEY fehlt."); }
