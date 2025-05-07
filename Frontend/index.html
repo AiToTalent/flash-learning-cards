@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KI Lernkarten & Quiz App (Mehrfachauswahl)</title> <script src="https://cdn.tailwindcss.com"></script>
+    <title>KI Lernkarten & Quiz App (Mehrfachauswahl)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
@@ -48,53 +49,12 @@
         /* Quiz Area Styles */
         #quiz-area { border: 1px dashed #cbd5e1; padding: 1.5rem; border-radius: 0.75rem; margin-top: 1.5rem; background-color: #fafafa; }
         .quiz-question { font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem; color: #1f2937; }
-        /* Updated for checkboxes */
-        .quiz-options label {
-            display: flex; /* Align checkbox and text */
-            align-items: center; /* Vertically align */
-            background-color: white;
-            padding: 0.75rem 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            margin-bottom: 0.5rem;
-            cursor: pointer;
-            transition: background-color 0.2s, border-color 0.2s;
-        }
+        .quiz-options label { display: flex; align-items: center; background-color: white; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; position: relative; /* For missed indicator */ }
         .quiz-options label:hover { background-color: #f9fafb; border-color: #a5b4fc; }
-        .quiz-options input[type="checkbox"] {
-            margin-right: 0.75rem; /* Increased spacing */
-            width: 1rem; height: 1rem; /* Explicit size */
-            accent-color: #4f46e5; /* Indigo */
-            cursor: pointer;
-        }
-        /* Style for checked state (optional visual feedback) */
-        .quiz-options input[type="checkbox"]:checked + span {
-             /* font-weight: 500; */ /* Example: make text medium */
-             /* color: #4f46e5; */ /* Example: change text color */
-        }
-        .quiz-options label.correct {
-             border-color: #22c55e; /* green-500 */
-             background-color: #f0fdf4; /* green-50 */
-        }
-         .quiz-options label.incorrect {
-             border-color: #ef4444; /* red-500 */
-             background-color: #fef2f2; /* red-50 */
-         }
-          .quiz-options label.missed {
-             border-color: #f97316; /* orange-500 */
-             /* background-color: #fff7ed; */ /* orange-50 */
-             /* Add a subtle indicator for missed correct answers */
-             position: relative;
-         }
-         .quiz-options label.missed::after {
-             content: '✓';
-             position: absolute;
-             right: 1rem;
-             color: #16a34a; /* green-600 */
-             font-weight: bold;
-         }
-
-
+        .quiz-options input[type="checkbox"] { margin-right: 0.75rem; width: 1rem; height: 1rem; accent-color: #4f46e5; cursor: pointer; }
+        .quiz-options label.correct { border-color: #22c55e; background-color: #f0fdf4; }
+        .quiz-options label.incorrect { border-color: #ef4444; background-color: #fef2f2; }
+        .quiz-options label.missed::after { content: '✓'; position: absolute; right: 1rem; color: #16a34a; font-weight: bold; }
         .quiz-feedback { margin-top: 1rem; padding: 0.75rem; border-radius: 0.5rem; font-weight: 500; }
         .feedback-correct { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
         .feedback-incorrect { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
@@ -208,10 +168,10 @@
             <div id="quiz-content">
                  <p class="text-center text-gray-500">Quiz wird geladen...</p>
             </div>
-            <div id="quiz-feedback" class="quiz-feedback mt-4" style="display: none;"> {/* Added margin-top */}
+            <div id="quiz-feedback" class="quiz-feedback mt-4" style="display: none;">
                 </div>
             <div class="text-center mt-6">
-                <button id="quiz-submit-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg shadow-md transition duration-150 ease-in-out" disabled> {/* Start disabled */}
+                <button id="quiz-submit-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg shadow-md transition duration-150 ease-in-out" disabled>
                     Antwort prüfen
                 </button>
             </div>
@@ -271,8 +231,9 @@
 
 
         // --- Configuration ---
-        const BACKEND_URL_FLASHCARDS = '/api/generate';
-        const BACKEND_URL_QUIZ = '/api/generate-quiz';
+        const API_BASE_URL = window.location.origin;
+        const BACKEND_URL_FLASHCARDS = `${API_BASE_URL}/api/generate`;
+        const BACKEND_URL_QUIZ = `${API_BASE_URL}/api/generate-quiz`;
         const LOCAL_STORAGE_KEY_PREFIX = 'flashcardProgress_';
         let currentSourceIdentifier = '';
 
@@ -282,7 +243,7 @@
         let currentCardIndex = 0;
         let currentQuizIndex = 0;
         let quizScore = 0;
-        let currentQuizSelectedIndices = new Set(); // Use a Set for multiple selections
+        let currentQuizSelectedIndices = new Set();
         let quizAnswerChecked = false;
         let isCardFlipped = false;
         let activeTab = 'text';
@@ -291,128 +252,115 @@
 
         // --- Functions ---
 
-        function displayError(message) { /* ... */ errorMessage.textContent = message; errorArea.style.display = 'block'; loadingIndicator.style.display = 'none'; flashcardArea.style.display = 'none'; quizArea.style.display = 'none'; noCardsMessage.style.display = 'none'; noQuizMessage.style.display = 'none'; }
-        function clearError() { /* ... */ errorMessage.textContent = ''; errorArea.style.display = 'none'; }
-        function switchTab(tabId) { /* ... */ activeTab = tabId.split('-')[0]; if (tabButtons && tabButtons.length > 0) { tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabId)); } if (tabContents && tabContents.length > 0) { tabContents.forEach(content => content.classList.toggle('active', content.id === tabId)); } clearError(); hideFlashcards(); hideQuiz(); }
-        function clearCardFeedbackIndicator() { /* ... */ if (cardFeedbackTimeout) clearTimeout(cardFeedbackTimeout); flashcardContainer.classList.remove('feedback-known', 'feedback-repeat'); }
-        function simpleHash(str) { /* ... */ let hash = 0; for (let i = 0; i < str.length; i++) { const char = str.charCodeAt(i); hash = ((hash << 5) - hash) + char; hash |= 0; } return Math.abs(hash).toString(36); }
-        function loadProgress() { /* ... */ if (!currentSourceIdentifier) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const savedProgress = localStorage.getItem(key); if (savedProgress) { const progressData = JSON.parse(savedProgress); cards.forEach(card => { if (progressData[card.id]) { card.status = progressData[card.id]; } }); } }
-        function saveProgress() { /* ... */ if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const progressToSave = {}; cards.forEach(card => { if (card.status) { progressToSave[card.id] = card.status; } }); if (Object.keys(progressToSave).length > 0) { localStorage.setItem(key, JSON.stringify(progressToSave)); } else { localStorage.removeItem(key); } }
-        function updatePersistentStatusIcon(card) { /* ... */ [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => { iconEl.style.display = 'none'; iconEl.className = 'status-icon'; if (card && card.status) { iconEl.style.display = 'flex'; if (card.status === 'known') { iconEl.classList.add('status-icon-known'); iconEl.textContent = '✓'; } else if (card.status === 'repeat') { iconEl.classList.add('status-icon-repeat'); iconEl.textContent = '✕'; } } }); }
+        function displayError(message) { errorMessage.textContent = message; errorArea.style.display = 'block'; loadingIndicator.style.display = 'none'; flashcardArea.style.display = 'none'; quizArea.style.display = 'none'; noCardsMessage.style.display = 'none'; noQuizMessage.style.display = 'none'; }
+        function clearError() { errorMessage.textContent = ''; errorArea.style.display = 'none'; }
+        function switchTab(tabId) { activeTab = tabId.split('-')[0]; if (tabButtons && tabButtons.length > 0) { tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabId)); } if (tabContents && tabContents.length > 0) { tabContents.forEach(content => content.classList.toggle('active', content.id === tabId)); } clearError(); hideFlashcards(); hideQuiz(); }
+        function clearCardFeedbackIndicator() { if (cardFeedbackTimeout) clearTimeout(cardFeedbackTimeout); flashcardContainer.classList.remove('feedback-known', 'feedback-repeat'); }
+        function simpleHash(str) { let hash = 0; for (let i = 0; i < str.length; i++) { const char = str.charCodeAt(i); hash = ((hash << 5) - hash) + char; hash |= 0; } return Math.abs(hash).toString(36); }
+        function loadProgress() { if (!currentSourceIdentifier) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const savedProgress = localStorage.getItem(key); if (savedProgress) { const progressData = JSON.parse(savedProgress); cards.forEach(card => { if (progressData[card.id]) { card.status = progressData[card.id]; } }); } }
+        function saveProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const progressToSave = {}; cards.forEach(card => { if (card.status) { progressToSave[card.id] = card.status; } }); if (Object.keys(progressToSave).length > 0) { localStorage.setItem(key, JSON.stringify(progressToSave)); } else { localStorage.removeItem(key); } }
+        function updatePersistentStatusIcon(card) { [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => { iconEl.style.display = 'none'; iconEl.className = 'status-icon'; if (card && card.status) { iconEl.style.display = 'flex'; if (card.status === 'known') { iconEl.classList.add('status-icon-known'); iconEl.textContent = '✓'; } else if (card.status === 'repeat') { iconEl.classList.add('status-icon-repeat'); iconEl.textContent = '✕'; } } }); }
 
         // --- Flashcard Specific Functions ---
         function hideFlashcards() { flashcardArea.style.display = 'none'; noCardsMessage.style.display = 'none'; }
-        function displayCard(index = currentCardIndex) { /* ... */ hideQuiz(); clearCardFeedbackIndicator(); if (index < 0 || index >= cards.length) index = 0; currentCardIndex = index; if (cards.length === 0) { hideFlashcards(); noCardsMessage.style.display = 'block'; updatePersistentStatusIcon(null); updateNavigation(); return; } noCardsMessage.style.display = 'none'; flashcardArea.style.display = 'block'; const card = cards[currentCardIndex]; cardFrontText.textContent = card.front; cardBackText.textContent = card.back; updatePersistentStatusIcon(card); if (isCardFlipped) { flashcard.classList.remove('is-flipped'); isCardFlipped = false; } updateNavigation(); }
-        function updateNavigation() { /* ... */ const hasCards = cards.length > 0; const hasMultipleCards = cards.length > 1; flashcardArea.style.display = (hasCards && currentMode === 'flashcards') ? 'block' : 'none'; noCardsMessage.style.display = (!hasCards && currentMode === 'flashcards') ? 'block' : 'none'; cardCounter.textContent = `Karte ${hasCards ? currentCardIndex + 1 : 0} / ${cards.length}`; prevButton.disabled = !hasCards || currentCardIndex === 0; nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1; knownButton.disabled = !hasCards; repeatButton.disabled = !hasCards; shuffleButton.disabled = !hasMultipleCards; resetProgressButton.disabled = !hasCards; }
-        function flipCard() { /* ... */ if (cards.length === 0) return; isCardFlipped = !isCardFlipped; flashcard.classList.toggle('is-flipped', isCardFlipped); }
-        function goToNextCard() { /* ... */ if (currentCardIndex < cards.length - 1) { currentCardIndex++; displayCard(); } else { console.log("End of cards reached."); clearCardFeedbackIndicator(); } }
-        function markCardStatus(status) { /* ... */ if (cards.length === 0) return; clearCardFeedbackIndicator(); flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat'); cards[currentCardIndex].status = status; updatePersistentStatusIcon(cards[currentCardIndex]); saveProgress(); cardFeedbackTimeout = setTimeout(() => { clearCardFeedbackIndicator(); goToNextCard(); }, 400); }
-        function shuffleCards() { /* ... */ if (cards.length < 2) return; console.log("Shuffling cards..."); for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; } console.log("Cards shuffled."); displayCard(0); }
-        function resetCurrentProgress() { /* ... */ if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; localStorage.removeItem(key); cards.forEach(card => delete card.status); console.log(`Progress reset for source: ${currentSourceIdentifier}`); displayCard(currentCardIndex); }
+        function displayCard(index = currentCardIndex) { hideQuiz(); clearCardFeedbackIndicator(); if (index < 0 || index >= cards.length) index = 0; currentCardIndex = index; if (cards.length === 0) { hideFlashcards(); noCardsMessage.style.display = 'block'; updatePersistentStatusIcon(null); updateNavigation(); return; } noCardsMessage.style.display = 'none'; flashcardArea.style.display = 'block'; const card = cards[currentCardIndex]; cardFrontText.textContent = card.front; cardBackText.textContent = card.back; updatePersistentStatusIcon(card); if (isCardFlipped) { flashcard.classList.remove('is-flipped'); isCardFlipped = false; } updateNavigation(); }
+        function updateNavigation() { const hasCards = cards.length > 0; const hasMultipleCards = cards.length > 1; flashcardArea.style.display = (hasCards && currentMode === 'flashcards') ? 'block' : 'none'; noCardsMessage.style.display = (!hasCards && currentMode === 'flashcards') ? 'block' : 'none'; cardCounter.textContent = `Karte ${hasCards ? currentCardIndex + 1 : 0} / ${cards.length}`; prevButton.disabled = !hasCards || currentCardIndex === 0; nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1; knownButton.disabled = !hasCards; repeatButton.disabled = !hasCards; shuffleButton.disabled = !hasMultipleCards; resetProgressButton.disabled = !hasCards; }
+        function flipCard() { if (cards.length === 0) return; isCardFlipped = !isCardFlipped; flashcard.classList.toggle('is-flipped', isCardFlipped); }
+        function goToNextCard() { if (currentCardIndex < cards.length - 1) { currentCardIndex++; displayCard(); } else { console.log("End of cards reached."); clearCardFeedbackIndicator(); } }
+        function markCardStatus(status) { if (cards.length === 0) return; clearCardFeedbackIndicator(); flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat'); cards[currentCardIndex].status = status; updatePersistentStatusIcon(cards[currentCardIndex]); saveProgress(); cardFeedbackTimeout = setTimeout(() => { clearCardFeedbackIndicator(); goToNextCard(); }, 400); }
+        function shuffleCards() { if (cards.length < 2) return; console.log("Shuffling cards..."); for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; } console.log("Cards shuffled."); displayCard(0); }
+        function resetCurrentProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; localStorage.removeItem(key); cards.forEach(card => delete card.status); console.log(`Progress reset for source: ${currentSourceIdentifier}`); displayCard(currentCardIndex); }
 
         // --- Quiz Specific Functions ---
-        function hideQuiz() {
-            quizArea.style.display = 'none';
-            noQuizMessage.style.display = 'none';
-            quizFeedback.style.display = 'none';
-            quizResultsArea.style.display = 'none';
-        }
+        function hideQuiz() { quizArea.style.display = 'none'; noQuizMessage.style.display = 'none'; quizFeedback.style.display = 'none'; quizResultsArea.style.display = 'none'; }
 
         function displayQuizQuestion() {
             hideFlashcards();
-            if (quizQuestions.length === 0 || currentQuizIndex >= quizQuestions.length) {
-                hideQuiz();
-                noQuizMessage.style.display = 'block';
-                return;
-            }
+            if (quizQuestions.length === 0 || currentQuizIndex >= quizQuestions.length) { hideQuiz(); noQuizMessage.style.display = 'block'; return; }
 
             noQuizMessage.style.display = 'none';
             quizArea.style.display = 'block';
             quizFeedback.style.display = 'none';
             quizResultsArea.style.display = 'none';
             quizSubmitButton.textContent = 'Antwort prüfen';
+            quizSubmitButton.disabled = true;
             quizAnswerChecked = false;
-            currentQuizSelectedIndices.clear(); // Clear previous selections
+            currentQuizSelectedIndices.clear();
 
             const questionData = quizQuestions[currentQuizIndex];
             let optionsHtml = `<div class="quiz-question">${currentQuizIndex + 1}. ${questionData.question}</div>`;
             optionsHtml += '<div class="quiz-options space-y-2">';
-
             questionData.options.forEach((option, index) => {
-                // Use checkboxes instead of radio buttons
+                const checkboxId = `q${currentQuizIndex}_opt${index}`;
                 optionsHtml += `
-                    <label class="block">
-                        <input type="checkbox" name="quizOption_${currentQuizIndex}" value="${index}" onchange="handleOptionChange(this, ${index})">
+                    <label for="${checkboxId}" class="block">
+                        <input type="checkbox" id="${checkboxId}" name="quizOption_${currentQuizIndex}" value="${index}" data-index="${index}">
                         <span>${option}</span>
                     </label>
                 `;
             });
             optionsHtml += '</div>';
             quizContent.innerHTML = optionsHtml;
-            quizSubmitButton.disabled = true; // Start disabled, enable when at least one option is checked
+
+            const optionsContainer = quizContent.querySelector('.quiz-options');
+            if (optionsContainer) {
+                optionsContainer.removeEventListener('change', handleOptionChange);
+                optionsContainer.addEventListener('change', handleOptionChange);
+            } else { console.error("Could not find .quiz-options container."); }
         }
 
-        // Updated handler for checkbox changes
-        function handleOptionChange(checkboxElement, index) {
-            if (checkboxElement.checked) {
-                currentQuizSelectedIndices.add(index);
-            } else {
-                currentQuizSelectedIndices.delete(index);
+        function handleOptionChange(event) {
+            if (event.target.type === 'checkbox') {
+                const checkboxElement = event.target;
+                const index = parseInt(checkboxElement.value, 10);
+                if (checkboxElement.checked) { currentQuizSelectedIndices.add(index); }
+                else { currentQuizSelectedIndices.delete(index); }
+                quizSubmitButton.disabled = currentQuizSelectedIndices.size === 0;
+                console.log("Selected indices:", currentQuizSelectedIndices);
+                const label = checkboxElement.closest('label');
+                if (label) { label.classList.toggle('bg-indigo-100', checkboxElement.checked); label.classList.toggle('border-indigo-400', checkboxElement.checked); }
             }
-            // Enable submit button only if at least one checkbox is selected
-            quizSubmitButton.disabled = currentQuizSelectedIndices.size === 0;
-             console.log("Selected indices:", currentQuizSelectedIndices); // Debugging
         }
 
-        // Updated answer checking logic for multiple correct answers
         function checkQuizAnswer() {
-            if (currentQuizSelectedIndices.size === 0) return; // Should not happen if button is enabled
+            if (currentQuizSelectedIndices.size === 0) return;
 
             const questionData = quizQuestions[currentQuizIndex];
-            // Ensure correctAnswerIndices is always an array
             const correctIndices = new Set(Array.isArray(questionData.correctAnswerIndices) ? questionData.correctAnswerIndices : [questionData.correctAnswerIndex]);
             const selectedIndices = currentQuizSelectedIndices;
 
-            let isFullyCorrect = correctIndices.size === selectedIndices.size &&
-                                 [...correctIndices].every(index => selectedIndices.has(index));
+            let isFullyCorrect = correctIndices.size === selectedIndices.size && [...correctIndices].every(index => selectedIndices.has(index));
 
             quizFeedback.style.display = 'block';
             quizFeedback.classList.remove('feedback-correct', 'feedback-incorrect');
 
-            // Provide visual feedback on each option
             document.querySelectorAll('.quiz-options label').forEach((label, index) => {
                  const checkbox = label.querySelector('input[type="checkbox"]');
-                 checkbox.disabled = true; // Disable after checking
+                 checkbox.disabled = true;
                  label.style.cursor = 'default';
-                 label.classList.remove('correct', 'incorrect', 'missed'); // Clear previous feedback classes
+                 label.classList.remove('correct', 'incorrect', 'missed', 'bg-indigo-100', 'border-indigo-400');
 
                  const isCorrectOption = correctIndices.has(index);
                  const isSelected = selectedIndices.has(index);
 
-                 if (isCorrectOption && isSelected) {
-                     label.classList.add('correct'); // Correctly selected
-                 } else if (!isCorrectOption && isSelected) {
-                     label.classList.add('incorrect'); // Incorrectly selected
-                 } else if (isCorrectOption && !isSelected) {
-                     label.classList.add('missed'); // Correct answer missed
-                 }
+                 if (isCorrectOption && isSelected) { label.classList.add('correct'); }
+                 else if (!isCorrectOption && isSelected) { label.classList.add('incorrect'); }
+                 else if (isCorrectOption && !isSelected) { label.classList.add('missed'); }
             });
-
 
             if (isFullyCorrect) {
                 quizScore++;
                 quizFeedback.textContent = 'Richtig!';
                 quizFeedback.classList.add('feedback-correct');
             } else {
-                // Construct feedback message listing correct answers
-                const correctAnswersText = [...correctIndices].map(i => questionData.options[i]).join(', ');
+                const correctAnswersText = [...correctIndices].map(i => questionData.options[i]).join('; ');
                 quizFeedback.textContent = `Teilweise richtig / Falsch. Korrekte Antwort(en): ${correctAnswersText}`;
                 quizFeedback.classList.add('feedback-incorrect');
             }
 
             quizAnswerChecked = true;
             quizSubmitButton.textContent = (currentQuizIndex < quizQuestions.length - 1) ? 'Nächste Frage' : 'Ergebnis anzeigen';
-            quizSubmitButton.disabled = false; // Ensure button is enabled to proceed
+            quizSubmitButton.disabled = false;
         }
 
         function showQuizResults() {
@@ -426,102 +374,68 @@
             quizResultsArea.style.display = 'block';
         }
 
-         // New function to restart the quiz
-         function restartQuiz() {
-             currentQuizIndex = 0;
-             quizScore = 0;
-             quizAnswerChecked = false;
-             currentQuizSelectedIndices.clear();
-             displayQuizQuestion();
-         }
-
-         // New function to switch back to flashcard mode
-         function switchToFlashcards() {
-             currentMode = 'flashcards';
-             hideQuiz();
-             // Display the first flashcard if available, otherwise show the 'no cards' message
-             if (cards.length > 0) {
-                 displayCard(0);
-             } else {
-                 hideFlashcards(); // Ensure card area is hidden
-                 noCardsMessage.style.display = 'block'; // Show message if no cards were ever generated
-             }
-         }
-
+         function restartQuiz() { currentQuizIndex = 0; quizScore = 0; quizAnswerChecked = false; currentQuizSelectedIndices.clear(); displayQuizQuestion(); }
+         function switchToFlashcards() { currentMode = 'flashcards'; hideQuiz(); if (cards.length > 0) { displayCard(0); } else { hideFlashcards(); noCardsMessage.style.display = 'block'; } }
 
         function handleQuizSubmit() {
             if (!quizAnswerChecked) {
                 checkQuizAnswer();
             } else {
-                // Move to next question or show results
                 currentQuizIndex++;
-                if (currentQuizIndex < quizQuestions.length) {
-                    displayQuizQuestion();
-                } else {
-                    showQuizResults();
-                }
+                if (currentQuizIndex < quizQuestions.length) { displayQuizQuestion(); }
+                else { showQuizResults(); }
             }
         }
 
         async function generateQuiz() {
-            clearError();
-            hideFlashcards();
-            hideQuiz();
-
-            let fetchOptions = { method: 'POST' };
-            let requestPayload = {};
-            const numQuestions = parseInt(numQuestionsInput.value, 10) || 5;
-
-            if (activeTab === 'text') { /* ... */ const textData = textInput.value; if (!textData.trim()) { displayError("Bitte gib zuerst Text ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'text', textData: textData, numQuestions: numQuestions }; fetchOptions.body = JSON.stringify(requestPayload);
-            } else if (activeTab === 'file') { /* ... */ const file = fileInput.files[0]; if (!file) { displayError("Bitte wähle zuerst eine Datei aus."); return; } const formData = new FormData(); formData.append('inputType', 'file'); formData.append('inputFile', file); formData.append('numQuestions', numQuestions); fetchOptions.body = formData;
-            } else if (activeTab === 'url') { /* ... */ const urlData = urlInput.value; if (!urlData.trim() || !urlData.startsWith('http')) { displayError("Bitte gib zuerst eine gültige URL ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'url', urlData: urlData, numQuestions: numQuestions }; fetchOptions.body = JSON.stringify(requestPayload);
-            } else { displayError("Unbekannter Eingabe-Tab."); return; }
-
-            loadingText.textContent = 'Generiere Quiz...';
-            loadingIndicator.style.display = 'block';
-            generateQuizButton.disabled = true;
-            generateButton.disabled = true;
-            quizQuestions = [];
-            currentQuizIndex = 0;
-            quizScore = 0;
-
-            console.log(`Sending request to: ${BACKEND_URL_QUIZ}`);
-             if (fetchOptions.body instanceof FormData) { console.log('Request FormData includes:'); for (let [key, value] of fetchOptions.body.entries()) { if (value instanceof File) { console.log(`  ${key}: ${value.name}`); } else { console.log(`  ${key}: ${value}`); } } } else { console.log('Request body:', fetchOptions.body); }
-
+            clearError(); hideFlashcards(); hideQuiz();
+            let fetchOptions = { method: 'POST' }; let requestPayload = {}; const numQuestions = parseInt(numQuestionsInput.value, 10) || 5;
+            if (activeTab === 'text') { const textData = textInput.value; if (!textData.trim()) { displayError("Bitte gib zuerst Text ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'text', textData: textData, numQuestions: numQuestions }; fetchOptions.body = JSON.stringify(requestPayload); }
+            else if (activeTab === 'file') { const file = fileInput.files[0]; if (!file) { displayError("Bitte wähle zuerst eine Datei aus."); return; } const formData = new FormData(); formData.append('inputType', 'file'); formData.append('inputFile', file); formData.append('numQuestions', numQuestions); fetchOptions.body = formData; }
+            else if (activeTab === 'url') { const urlData = urlInput.value; if (!urlData.trim() || !urlData.startsWith('http')) { displayError("Bitte gib zuerst eine gültige URL ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'url', urlData: urlData, numQuestions: numQuestions }; fetchOptions.body = JSON.stringify(requestPayload); }
+            else { displayError("Unbekannter Eingabe-Tab."); return; }
+            loadingText.textContent = 'Generiere Quiz...'; loadingIndicator.style.display = 'block'; generateQuizButton.disabled = true; generateButton.disabled = true; quizQuestions = []; currentQuizIndex = 0; quizScore = 0;
+            console.log(`Sending request to: ${BACKEND_URL_QUIZ}`); if (fetchOptions.body instanceof FormData) { console.log('Request FormData includes:'); for (let [key, value] of fetchOptions.body.entries()) { if (value instanceof File) { console.log(`  ${key}: ${value.name}`); } else { console.log(`  ${key}: ${value}`); } } } else { console.log('Request body:', fetchOptions.body); }
             try {
-                const response = await fetch(BACKEND_URL_QUIZ, fetchOptions);
-                console.log(`Quiz Response status: ${response.status} ${response.statusText}`);
-                if (!response.ok) { let errorMsg = `Fehler vom Server (Quiz): ${response.status} ${response.statusText}`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
-                const data = await response.json();
-                console.log('Quiz Data received:', data);
-                if (data.quiz && Array.isArray(data.quiz) && data.quiz.length > 0) {
-                    quizQuestions = data.quiz;
-                    currentQuizIndex = 0;
-                    quizScore = 0;
-                    currentMode = 'quiz';
-                    displayQuizQuestion();
-                } else { quizQuestions = []; displayError("Konnte keine Quizfragen generieren oder die Antwort war leer."); }
+                // --- FIXED: Log the full URL being fetched ---
+                const fullUrl = BACKEND_URL_QUIZ;
+                console.log(`Fetching from URL: ${fullUrl}`);
+                const response = await fetch(fullUrl, fetchOptions);
+                // --- END OF FIX ---
+                console.log(`Quiz Response status: ${response.status} ${response.statusText}`); if (!response.ok) { let errorMsg = `Fehler vom Server (Quiz): ${response.status} ${response.statusText}`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
+                const data = await response.json(); console.log('Quiz Data received:', data); if (data.quiz && Array.isArray(data.quiz) && data.quiz.length > 0) { quizQuestions = data.quiz; currentQuizIndex = 0; quizScore = 0; currentMode = 'quiz'; displayQuizQuestion(); }
+                else { quizQuestions = []; displayError("Konnte keine Quizfragen generieren oder die Antwort war leer."); }
             } catch (error) {
                 console.error("Fehler beim Generieren des Quiz:", error);
-                displayError(`Fehler: ${error.message}. Läuft der Backend-Server?`);
+                // --- UPDATED CATCH BLOCK ---
+                let displayMsg = "Unbekannter Fehler beim Generieren des Quiz."; // Default
+                // Check if error object exists and has a message property
+                if (error && typeof error.message === 'string' && error.message.length > 0) {
+                    displayMsg = error.message;
+                } else if (typeof error === 'string' && error.length > 0) { // Handle if error is just a string
+                    displayMsg = error;
+                } else {
+                    // Try to stringify the error if it's an object but has no message
+                    try {
+                         displayMsg = JSON.stringify(error);
+                         if (displayMsg === '{}') { // Avoid showing empty object
+                             displayMsg = "Unbekannter Fehler (leeres Fehlerobjekt).";
+                         }
+                    } catch (e) {
+                        displayMsg = "Unbekannter Fehler (konnte nicht verarbeitet werden).";
+                    }
+                }
+                displayMsg += " Läuft der Backend-Server und ist er erreichbar?";
+                displayError(displayMsg); // Use the potentially improved message
+                // --- END OF UPDATE ---
                 quizQuestions = [];
                 hideQuiz();
-            } finally {
-                loadingIndicator.style.display = 'none';
-                generateQuizButton.disabled = false;
-                generateButton.disabled = false;
-            }
+            } finally { loadingIndicator.style.display = 'none'; generateQuizButton.disabled = false; generateButton.disabled = false; }
         }
 
-
         // --- Event Listeners ---
-        if (tabButtons && tabButtons.length > 0) {
-             tabButtons.forEach(button => {
-                 button.addEventListener('click', () => { switchTab(button.dataset.tab); });
-             });
-        } else { console.error("Could not find tab buttons on initialization."); }
-
-        generateButton.addEventListener('click', async () => { /* ... (Flashcard generation logic remains the same) ... */
+        if (tabButtons && tabButtons.length > 0) { tabButtons.forEach(button => { button.addEventListener('click', () => { switchTab(button.dataset.tab); }); }); } else { console.error("Could not find tab buttons on initialization."); }
+        generateButton.addEventListener('click', async () => {
             clearError(); hideQuiz(); let fetchOptions = { method: 'POST' }; let requestPayload = {}; const maxCards = parseInt(maxCardsInput.value, 10) || 10; let sourceName = `text_input_temp`;
             if (activeTab === 'text') { const textData = textInput.value; if (!textData.trim()) { displayError("Bitte gib Text ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'text', textData: textData, maxCards: maxCards }; fetchOptions.body = JSON.stringify(requestPayload); sourceName = `text_${simpleHash(textData.substring(0, 200))}`; }
             else if (activeTab === 'file') { const file = fileInput.files[0]; if (!file) { displayError("Bitte wähle eine Datei aus."); return; } const formData = new FormData(); formData.append('inputType', 'file'); formData.append('inputFile', file); formData.append('maxCards', maxCards); fetchOptions.body = formData; sourceName = `file_${file.name}_${file.size}`; }
@@ -529,7 +443,12 @@
             currentSourceIdentifier = sourceName; loadingText.textContent = 'Generiere Lernkarten...'; loadingIndicator.style.display = 'block'; aiNotice.style.display = 'none'; generateButton.disabled = true; generateQuizButton.disabled = true; cards = []; currentCardIndex = 0;
             console.log(`Sending request to: ${BACKEND_URL_FLASHCARDS} for source: ${currentSourceIdentifier}`); if (fetchOptions.body instanceof FormData) { console.log('Request FormData includes:'); for (let [key, value] of fetchOptions.body.entries()) { if (value instanceof File) { console.log(`  ${key}: ${value.name}`); } else { console.log(`  ${key}: ${value}`); } } } else { console.log('Request body:', fetchOptions.body); }
             try {
-                const response = await fetch(BACKEND_URL_FLASHCARDS, fetchOptions); console.log(`Flashcard Response status: ${response.status} ${response.statusText}`); if (!response.ok) { let errorMsg = `Fehler vom Server: ${response.status} ${response.statusText}`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
+                // --- FIXED: Log the full URL being fetched ---
+                const fullUrl = BACKEND_URL_FLASHCARDS;
+                console.log(`Fetching from URL: ${fullUrl}`);
+                const response = await fetch(fullUrl, fetchOptions);
+                // --- END OF FIX ---
+                console.log(`Flashcard Response status: ${response.status} ${response.statusText}`); if (!response.ok) { let errorMsg = `Fehler vom Server: ${response.status} ${response.statusText}`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
                 const data = await response.json(); console.log('Flashcard Data received:', data); if (data.flashcards && Array.isArray(data.flashcards) && data.flashcards.length > 0) { cards = data.flashcards.map((card, index) => ({ ...card, id: `card_${index}` })); loadProgress(); currentCardIndex = 0; isCardFlipped = false; currentMode = 'flashcards'; displayCard(); aiNotice.style.display = 'block'; }
                 else { cards = []; displayError("Konnte keine Lernkarten generieren oder die Antwort war leer."); }
             } catch (error) { console.error("Fehler beim Generieren der Lernkarten:", error); displayError(`Fehler: ${error.message}. Läuft der Backend-Server?`); cards = []; hideFlashcards();
