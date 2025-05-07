@@ -3,160 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KI Lernkarten App (Lernfortschritt speichern)</title>
+    <title>KI Lernkarten & Quiz App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            /* Subtle gradient background */
-            background-image: linear-gradient(to top, #f3e8ff, #e9d5ff); /* Light purple gradient */
+            background-image: linear-gradient(to top, #f3e8ff, #e9d5ff);
         }
 
-        /* Custom styles for flashcard flip */
-        .flashcard-container {
-            perspective: 1000px;
-            min-height: 250px; /* Slightly increased height */
-            position: relative;
-            transition: box-shadow 0.3s ease-in-out;
-        }
-        /* Feedback Status indicator styles (temporary shadow) */
-        .flashcard-container.feedback-known {
-             box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); /* Slightly stronger green shadow */
-        }
-        .flashcard-container.feedback-repeat {
-             box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); /* Slightly stronger red shadow */
-        }
-        .flashcard {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1); /* Smoother flip animation */
-            cursor: pointer;
-        }
-        .flashcard.is-flipped {
-            transform: rotateY(180deg);
-        }
-        .flashcard-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column; /* Allow text to wrap better */
-            justify-content: center;
-            align-items: center;
-            padding: 2rem; /* Increased padding */
-            border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* shadow-lg */
-            font-family: 'Inter', sans-serif;
-            text-align: center;
-            border: 1px solid rgba(0,0,0,0.05); /* Subtle border */
-            position: relative; /* For persistent status icon */
-        }
-        .flashcard-front {
-            background-color: #ffffff;
-            color: #1f2937; /* text-gray-800 */
-        }
-        .flashcard-back {
-            background-color: #f5f3ff; /* Lighter purple background */
-            color: #5b21b6; /* Darker purple text */
-            transform: rotateY(180deg);
-        }
+        /* Flashcard styles */
+        .flashcard-container { perspective: 1000px; min-height: 250px; position: relative; transition: box-shadow 0.3s ease-in-out; }
+        .flashcard-container.feedback-known { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); }
+        .flashcard-container.feedback-repeat { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); }
+        .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1); cursor: pointer; }
+        .flashcard.is-flipped { transform: rotateY(180deg); }
+        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); font-family: 'Inter', sans-serif; text-align: center; border: 1px solid rgba(0,0,0,0.05); position: relative; }
+        .flashcard-front { background-color: #ffffff; color: #1f2937; }
+        .flashcard-back { background-color: #f5f3ff; color: #5b21b6; transform: rotateY(180deg); }
+        .status-icon { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: white; z-index: 10; }
+        .status-icon-known { background-color: rgba(34, 197, 94, 0.8); }
+        .status-icon-repeat { background-color: rgba(239, 68, 68, 0.8); }
 
-        /* Persistent Status Icon on Card */
-        .status-icon {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 24px; /* Slightly larger icon */
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem; /* Smaller font for icon text */
-            font-weight: bold;
-            color: white;
-            z-index: 10; /* Ensure it's above card content */
-        }
-        .status-icon-known { background-color: rgba(34, 197, 94, 0.8); /* Green */ }
-        .status-icon-repeat { background-color: rgba(239, 68, 68, 0.8); /* Red */ }
+        /* Button styles */
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        button:not(:disabled) { transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out; }
+        button:not(:disabled):hover { transform: scale(1.03); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+        button:not(:disabled):active { transform: scale(0.98); }
 
-
-        /* Basic styling for disabled buttons */
-        button:disabled {
-            opacity: 0.6; /* Slightly more visible when disabled */
-            cursor: not-allowed;
-        }
-        /* General button hover/active states */
-        button:not(:disabled) {
-            transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
-        }
-        button:not(:disabled):hover {
-            transform: scale(1.03); /* Slight scale on hover */
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
-        }
-         button:not(:disabled):active {
-            transform: scale(0.98); /* Slight shrink on click */
-        }
-
-        /* Styling for active/inactive tabs */
-        .tab-button {
-            padding: 0.6rem 1.2rem; /* Slightly larger padding */
-            border-radius: 0.5rem; /* rounded-lg */
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            border-bottom: 3px solid transparent; /* Space for active indicator */
-            margin-bottom: -1px; /* Overlap border-bottom */
-            font-weight: 500; /* medium */
-        }
-        .tab-button.active {
-            background-color: transparent; /* No background for active tab */
-            color: #4f46e5; /* text-indigo-600 */
-            border-bottom-color: #4f46e5; /* Indigo border bottom */
-        }
-        .tab-button:not(.active) {
-            background-color: transparent;
-            color: #6b7280; /* text-gray-500 */
-            border-color: transparent;
-        }
-         .tab-button:not(.active):hover {
-             background-color: #f3f4f6; /* bg-gray-100 */
-             color: #374151; /* text-gray-700 */
-         }
-
+        /* Tab styles */
+        .tab-button { padding: 0.6rem 1.2rem; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease-in-out; border-bottom: 3px solid transparent; margin-bottom: -1px; font-weight: 500; }
+        .tab-button.active { background-color: transparent; color: #4f46e5; border-bottom-color: #4f46e5; }
+        .tab-button:not(.active) { background-color: transparent; color: #6b7280; border-color: transparent; }
+        .tab-button:not(.active):hover { background-color: #f3f4f6; color: #374151; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Error message styling */
-        .error-message {
-            color: #991b1b; /* dark red */
-            background-color: #fee2e2;
-            border: 1px solid #fca5a5; /* lighter red border */
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem; /* rounded-lg */
-            margin-top: 1rem;
-            text-align: center;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        /* Loading Spinner */
-        .loader {
-            border: 4px solid #e5e7eb; /* gray-200 */
-            border-top: 4px solid #4f46e5; /* Indigo */
-            border-radius: 50%;
-            width: 28px; /* Slightly larger */
-            height: 28px;
-            animation: spin 1s linear infinite;
-            margin: 8px auto 0; /* Increased top margin */
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        /* Error message */
+        .error-message { color: #991b1b; background-color: #fee2e2; border: 1px solid #fca5a5; padding: 0.75rem 1rem; border-radius: 0.5rem; margin-top: 1rem; text-align: center; font-size: 0.875rem; font-weight: 500; }
+        /* Loader */
+        .loader { border: 4px solid #e5e7eb; border-top: 4px solid #4f46e5; border-radius: 50%; width: 28px; height: 28px; animation: spin 1s linear infinite; margin: 8px auto 0; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Quiz Area Styles */
+        #quiz-area { border: 1px dashed #cbd5e1; padding: 1.5rem; border-radius: 0.75rem; margin-top: 1.5rem; background-color: #fafafa; }
+        .quiz-question { font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem; color: #1f2937; }
+        .quiz-options label { display: block; background-color: white; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
+        .quiz-options label:hover { background-color: #f9fafb; border-color: #a5b4fc; }
+        .quiz-options input[type="radio"] { margin-right: 0.5rem; accent-color: #4f46e5; }
+        .quiz-feedback { margin-top: 1rem; padding: 0.75rem; border-radius: 0.5rem; font-weight: 500; }
+        .feedback-correct { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .feedback-incorrect { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .quiz-results { margin-top: 1.5rem; padding: 1rem; background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 0.5rem; text-align: center; }
 
     </style>
 </head>
@@ -164,7 +63,7 @@
 
     <div class="w-full max-w-3xl bg-white p-6 md:p-10 rounded-xl shadow-xl">
         <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-8">
-             KI Lernkarten App ✨
+             KI Lernkarten & Quiz App ✨
         </h1>
 
         <div class="mb-6 border-b border-gray-200">
@@ -192,23 +91,34 @@
             </div>
         </div>
 
-        <div class="mb-8 flex items-center justify-center space-x-3">
-             <label for="max-cards-input" class="text-sm font-medium text-gray-700">Maximale Kartenanzahl:</label>
-             <input type="number" id="max-cards-input" value="10" min="3" max="25" class="w-20 p-2 border border-gray-300 rounded-lg shadow-sm text-center focus:ring-indigo-500 focus:border-indigo-500">
+        <div class="mb-8 flex flex-col sm:flex-row items-center justify-center sm:space-x-6 space-y-4 sm:space-y-0">
+             <div class="flex items-center space-x-3">
+                 <label for="max-cards-input" class="text-sm font-medium text-gray-700">Max. Lernkarten:</label>
+                 <input type="number" id="max-cards-input" value="10" min="3" max="25" class="w-20 p-2 border border-gray-300 rounded-lg shadow-sm text-center focus:ring-indigo-500 focus:border-indigo-500">
+             </div>
+             <div class="flex items-center space-x-3">
+                 <label for="num-questions-input" class="text-sm font-medium text-gray-700">Anzahl Quizfragen:</label>
+                 <input type="number" id="num-questions-input" value="5" min="3" max="15" class="w-20 p-2 border border-gray-300 rounded-lg shadow-sm text-center focus:ring-indigo-500 focus:border-indigo-500">
+             </div>
         </div>
-        <div class="text-center mb-8">
-            <button id="generate-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out text-base">
+
+        <div class="text-center mb-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+            <button id="generate-button" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out text-base">
                 Lernkarten generieren
             </button>
-             <div id="loading-indicator" style="display: none;">
-                 <div class="loader"></div>
-                 <p class="text-sm text-indigo-600 mt-2">Generiere Karten...</p>
-             </div>
-             <p id="ai-notice" class="text-xs text-gray-500 mt-2 font-medium" style="display: none;">Hinweis: Die KI-Generierung erfolgt im Backend.</p>
-             <div id="error-area" class="mt-4" style="display: none;">
-                 <p id="error-message" class="error-message"></p>
-             </div>
+            <button id="generate-quiz-button" class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out text-base">
+                Quiz generieren
+            </button>
         </div>
+         <div id="loading-indicator" style="display: none;" class="text-center mb-4">
+             <div class="loader inline-block"></div>
+             <p id="loading-text" class="text-sm text-indigo-600 mt-2">Generiere...</p>
+         </div>
+         <p id="ai-notice" class="text-xs text-gray-500 text-center mt-2 font-medium mb-4" style="display: none;">Hinweis: Die KI-Generierung erfolgt im Backend.</p>
+         <div id="error-area" class="mt-4" style="display: none;">
+             <p id="error-message" class="error-message"></p>
+         </div>
+
 
         <div id="flashcard-area" class="mb-6" style="display: none;">
             <p class="text-center text-sm text-gray-500 mb-3">Klicke auf die Karte, um sie umzudrehen.</p>
@@ -224,34 +134,22 @@
                     </div>
                 </div>
             </div>
-
             <div class="flex justify-between items-center mb-5">
-                <button id="prev-button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out disabled:bg-gray-100 disabled:text-gray-400" disabled>
-                    Zurück
-                </button>
+                <button id="prev-button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out disabled:bg-gray-100 disabled:text-gray-400" disabled>Zurück</button>
                 <button id="shuffle-button" class="shuffle-button bg-purple-500 hover:bg-purple-600 text-white font-medium py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out flex items-center disabled:bg-purple-200 disabled:text-purple-400" disabled>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v3a2 2 0 01-2 2H5a2 2 0 01-2-2v-3a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0l3 3m-3-3l-3 3" />
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v3a2 2 0 01-2 2H5a2 2 0 01-2-2v-3a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0l3 3m-3-3l-3 3" /></svg>
                     Mischen
                 </button>
                 <span id="card-counter" class="text-base font-medium text-gray-700">Karte 0 / 0</span>
-                <button id="next-button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out disabled:bg-gray-100 disabled:text-gray-400" disabled>
-                    Weiter
-                </button>
+                <button id="next-button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out disabled:bg-gray-100 disabled:text-gray-400" disabled>Weiter</button>
             </div>
-
             <div id="progress-buttons" class="flex justify-center space-x-5 mt-5">
                  <button id="repeat-button" class="bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-3 px-6 rounded-lg shadow-sm transition duration-150 ease-in-out flex items-center disabled:bg-red-50 disabled:text-red-300" disabled>
-                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                     </svg>
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                      Nochmal
                  </button>
                  <button id="known-button" class="bg-green-100 hover:bg-green-200 text-green-700 font-semibold py-3 px-6 rounded-lg shadow-sm transition duration-150 ease-in-out flex items-center disabled:bg-green-50 disabled:text-green-300" disabled>
-                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                     </svg>
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
                      Wusste ich
                  </button>
             </div>
@@ -262,21 +160,45 @@
             </div>
         </div>
 
-         <div id="no-cards-message" class="text-center text-gray-500 mt-4" style="display: none;">
-            Keine Karten zum Anzeigen vorhanden. Bitte gib Text ein, lade eine Datei hoch oder gib eine URL an.
+        <div id="quiz-area" class="mb-6" style="display: none;">
+            <h2 class="text-xl font-semibold text-center text-gray-700 mb-4">Quiz</h2>
+            <div id="quiz-content">
+                <p class="text-center text-gray-500">Quiz wird geladen...</p>
+            </div>
+            <div id="quiz-feedback" class="quiz-feedback" style="display: none;">
+                </div>
+            <div class="text-center mt-6">
+                <button id="quiz-submit-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg shadow-md transition duration-150 ease-in-out">
+                    Antwort prüfen / Nächste Frage
+                </button>
+            </div>
+             <div id="quiz-results-area" class="quiz-results" style="display: none;">
+                 </div>
+        </div>
+        <div id="no-cards-message" class="text-center text-gray-500 mt-4" style="display: none;">
+            Keine Lernkarten zum Anzeigen vorhanden.
+        </div>
+         <div id="no-quiz-message" class="text-center text-gray-500 mt-4" style="display: none;">
+            Kein Quiz zum Anzeigen vorhanden.
         </div>
     </div>
 
     <script>
+      // Wrap the entire script in a DOMContentLoaded listener
+      document.addEventListener('DOMContentLoaded', () => {
+
         // --- DOM Elements ---
         const textInput = document.getElementById('text-input');
         const fileInput = document.getElementById('file-input');
         const urlInput = document.getElementById('url-input');
         const generateButton = document.getElementById('generate-button');
+        const generateQuizButton = document.getElementById('generate-quiz-button');
         const loadingIndicator = document.getElementById('loading-indicator');
+        const loadingText = document.getElementById('loading-text');
         const aiNotice = document.getElementById('ai-notice');
         const errorArea = document.getElementById('error-area');
         const errorMessage = document.getElementById('error-message');
+        // Flashcard Elements
         const flashcardArea = document.getElementById('flashcard-area');
         const flashcardContainer = document.getElementById('flashcard-container');
         const flashcard = document.getElementById('flashcard');
@@ -288,27 +210,43 @@
         const nextButton = document.getElementById('next-button');
         const cardCounter = document.getElementById('card-counter');
         const noCardsMessage = document.getElementById('no-cards-message');
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
         const progressButtonsContainer = document.getElementById('progress-buttons');
         const knownButton = document.getElementById('known-button');
         const repeatButton = document.getElementById('repeat-button');
         const shuffleButton = document.getElementById('shuffle-button');
-        const maxCardsInput = document.getElementById('max-cards-input');
         const resetProgressButton = document.getElementById('reset-progress-button');
+        const maxCardsInput = document.getElementById('max-cards-input');
+        // Quiz Elements
+        const numQuestionsInput = document.getElementById('num-questions-input');
+        const quizArea = document.getElementById('quiz-area');
+        const quizContent = document.getElementById('quiz-content');
+        const quizFeedback = document.getElementById('quiz-feedback');
+        const quizSubmitButton = document.getElementById('quiz-submit-button');
+        const quizResultsArea = document.getElementById('quiz-results-area');
+        const noQuizMessage = document.getElementById('no-quiz-message');
+        // Tab buttons MUST be declared after DOMContentLoaded
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
 
 
         // --- Configuration ---
-        const BACKEND_URL = '/api/generate'; // For production on Render
+        const BACKEND_URL_FLASHCARDS = '/api/generate'; // Adjusted for Render
+        const BACKEND_URL_QUIZ = '/api/generate-quiz'; // New endpoint
         const LOCAL_STORAGE_KEY_PREFIX = 'flashcardProgress_';
         let currentSourceIdentifier = '';
 
         // --- State ---
         let cards = [];
+        let quizQuestions = [];
         let currentCardIndex = 0;
+        let currentQuizIndex = 0;
+        let quizScore = 0;
+        let currentQuizAnswerSelected = null;
+        let quizAnswerChecked = false;
         let isCardFlipped = false;
         let activeTab = 'text';
         let cardFeedbackTimeout = null;
+        let currentMode = 'flashcards';
 
         // --- Functions ---
 
@@ -317,7 +255,9 @@
             errorArea.style.display = 'block';
             loadingIndicator.style.display = 'none';
             flashcardArea.style.display = 'none';
+            quizArea.style.display = 'none';
             noCardsMessage.style.display = 'none';
+            noQuizMessage.style.display = 'none';
         }
 
         function clearError() {
@@ -327,9 +267,16 @@
 
         function switchTab(tabId) {
             activeTab = tabId.split('-')[0];
-            tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabId));
-            tabContents.forEach(content => content.classList.toggle('active', content.id === tabId));
+            // Check if tabButtons exists before iterating
+            if (tabButtons && tabButtons.length > 0) {
+                tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabId));
+            }
+            if (tabContents && tabContents.length > 0) {
+                tabContents.forEach(content => content.classList.toggle('active', content.id === tabId));
+            }
             clearError();
+            hideFlashcards();
+            hideQuiz();
         }
 
         function clearCardFeedbackIndicator() {
@@ -338,69 +285,31 @@
         }
 
         function simpleHash(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                const char = str.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash |= 0;
-            }
-            return Math.abs(hash).toString(36);
+            let hash = 0; for (let i = 0; i < str.length; i++) { const char = str.charCodeAt(i); hash = ((hash << 5) - hash) + char; hash |= 0; } return Math.abs(hash).toString(36);
         }
-
         function loadProgress() {
-            if (!currentSourceIdentifier) return;
-            const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
-            const savedProgress = localStorage.getItem(key);
-            if (savedProgress) {
-                const progressData = JSON.parse(savedProgress);
-                cards.forEach(card => {
-                    if (progressData[card.id]) {
-                        card.status = progressData[card.id];
-                    }
-                });
-            }
+            if (!currentSourceIdentifier) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const savedProgress = localStorage.getItem(key); if (savedProgress) { const progressData = JSON.parse(savedProgress); cards.forEach(card => { if (progressData[card.id]) { card.status = progressData[card.id]; } }); }
         }
-
         function saveProgress() {
-            if (!currentSourceIdentifier || cards.length === 0) return;
-            const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
-            const progressToSave = {};
-            cards.forEach(card => {
-                if (card.status) {
-                    progressToSave[card.id] = card.status;
-                }
-            });
-            if (Object.keys(progressToSave).length > 0) {
-                localStorage.setItem(key, JSON.stringify(progressToSave));
-            } else {
-                localStorage.removeItem(key);
-            }
+            if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const progressToSave = {}; cards.forEach(card => { if (card.status) { progressToSave[card.id] = card.status; } }); if (Object.keys(progressToSave).length > 0) { localStorage.setItem(key, JSON.stringify(progressToSave)); } else { localStorage.removeItem(key); }
         }
-
         function updatePersistentStatusIcon(card) {
-            [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => {
-                iconEl.style.display = 'none';
-                iconEl.className = 'status-icon';
-                if (card && card.status) {
-                    iconEl.style.display = 'flex';
-                    if (card.status === 'known') {
-                        iconEl.classList.add('status-icon-known');
-                        iconEl.textContent = '✓';
-                    } else if (card.status === 'repeat') {
-                        iconEl.classList.add('status-icon-repeat');
-                        iconEl.textContent = '✕';
-                    }
-                }
-            });
+            [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => { iconEl.style.display = 'none'; iconEl.className = 'status-icon'; if (card && card.status) { iconEl.style.display = 'flex'; if (card.status === 'known') { iconEl.classList.add('status-icon-known'); iconEl.textContent = '✓'; } else if (card.status === 'repeat') { iconEl.classList.add('status-icon-repeat'); iconEl.textContent = '✕'; } } });
         }
 
+        // --- Flashcard Specific Functions ---
+        function hideFlashcards() {
+            flashcardArea.style.display = 'none';
+            noCardsMessage.style.display = 'none';
+        }
         function displayCard(index = currentCardIndex) {
+            hideQuiz();
             clearCardFeedbackIndicator();
             if (index < 0 || index >= cards.length) index = 0;
             currentCardIndex = index;
 
             if (cards.length === 0) {
-                flashcardArea.style.display = 'none';
+                hideFlashcards();
                 noCardsMessage.style.display = 'block';
                 updatePersistentStatusIcon(null);
                 updateNavigation();
@@ -421,161 +330,238 @@
             }
             updateNavigation();
         }
-
         function updateNavigation() {
-             const hasCards = cards.length > 0;
-             const hasMultipleCards = cards.length > 1;
-             flashcardArea.style.display = hasCards ? 'block' : 'none';
-             noCardsMessage.style.display = hasCards ? 'none' : 'block';
+             const hasCards = cards.length > 0; const hasMultipleCards = cards.length > 1;
+             flashcardArea.style.display = (hasCards && currentMode === 'flashcards') ? 'block' : 'none';
+             noCardsMessage.style.display = (!hasCards && currentMode === 'flashcards') ? 'block' : 'none';
              cardCounter.textContent = `Karte ${hasCards ? currentCardIndex + 1 : 0} / ${cards.length}`;
-             prevButton.disabled = !hasCards || currentCardIndex === 0;
-             nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1;
-             knownButton.disabled = !hasCards;
-             repeatButton.disabled = !hasCards;
-             shuffleButton.disabled = !hasMultipleCards;
-             resetProgressButton.disabled = !hasCards;
+             prevButton.disabled = !hasCards || currentCardIndex === 0; nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1; knownButton.disabled = !hasCards; repeatButton.disabled = !hasCards; shuffleButton.disabled = !hasMultipleCards; resetProgressButton.disabled = !hasCards;
+        }
+        function flipCard() { if (cards.length === 0) return; isCardFlipped = !isCardFlipped; flashcard.classList.toggle('is-flipped', isCardFlipped); }
+        function goToNextCard() { if (currentCardIndex < cards.length - 1) { currentCardIndex++; displayCard(); } else { console.log("End of cards reached."); clearCardFeedbackIndicator(); } }
+        function markCardStatus(status) { if (cards.length === 0) return; clearCardFeedbackIndicator(); flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat'); cards[currentCardIndex].status = status; updatePersistentStatusIcon(cards[currentCardIndex]); saveProgress(); cardFeedbackTimeout = setTimeout(() => { clearCardFeedbackIndicator(); goToNextCard(); }, 400); }
+        function shuffleCards() { if (cards.length < 2) return; console.log("Shuffling cards..."); for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; } console.log("Cards shuffled."); displayCard(0); }
+        function resetCurrentProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; localStorage.removeItem(key); cards.forEach(card => delete card.status); console.log(`Progress reset for source: ${currentSourceIdentifier}`); displayCard(currentCardIndex); }
+
+        // --- Quiz Specific Functions ---
+        function hideQuiz() {
+            quizArea.style.display = 'none';
+            noQuizMessage.style.display = 'none';
+            quizFeedback.style.display = 'none';
+            quizResultsArea.style.display = 'none';
         }
 
-        function flipCard() {
-             if (cards.length === 0) return;
-            isCardFlipped = !isCardFlipped;
-            flashcard.classList.toggle('is-flipped', isCardFlipped);
+        function displayQuizQuestion() {
+            hideFlashcards();
+            if (quizQuestions.length === 0 || currentQuizIndex >= quizQuestions.length) {
+                hideQuiz();
+                noQuizMessage.style.display = 'block';
+                return;
+            }
+
+            noQuizMessage.style.display = 'none';
+            quizArea.style.display = 'block';
+            quizFeedback.style.display = 'none';
+            quizResultsArea.style.display = 'none';
+            quizSubmitButton.textContent = 'Antwort prüfen';
+            quizAnswerChecked = false;
+            currentQuizAnswerSelected = null;
+
+            const questionData = quizQuestions[currentQuizIndex];
+            let optionsHtml = `<div class="quiz-question">${currentQuizIndex + 1}. ${questionData.question}</div>`;
+            optionsHtml += '<div class="quiz-options space-y-2">';
+
+            questionData.options.forEach((option, index) => {
+                optionsHtml += `
+                    <label class="block">
+                        <input type="radio" name="quizOption" value="${index}" onclick="handleOptionSelect(${index})">
+                        ${option}
+                    </label>
+                `;
+            });
+            optionsHtml += '</div>';
+            quizContent.innerHTML = optionsHtml;
+            quizSubmitButton.disabled = true;
         }
 
-        function goToNextCard() {
-            if (currentCardIndex < cards.length - 1) {
-                currentCardIndex++;
-                displayCard();
+        function handleOptionSelect(index) {
+            currentQuizAnswerSelected = index;
+            quizSubmitButton.disabled = false;
+            document.querySelectorAll('.quiz-options label').forEach((label, i) => {
+                label.classList.toggle('bg-indigo-100', i === index);
+                label.classList.toggle('border-indigo-400', i === index);
+            });
+        }
+
+        function checkQuizAnswer() {
+            if (currentQuizAnswerSelected === null) return;
+
+            const questionData = quizQuestions[currentQuizIndex];
+            const correctAnswer = questionData.correctAnswerIndex;
+            const isCorrect = currentQuizAnswerSelected === correctAnswer;
+
+            quizFeedback.style.display = 'block';
+            quizFeedback.classList.remove('feedback-correct', 'feedback-incorrect');
+
+            if (isCorrect) {
+                quizScore++;
+                quizFeedback.textContent = 'Richtig!';
+                quizFeedback.classList.add('feedback-correct');
             } else {
-                 console.log("End of cards reached.");
-                 clearCardFeedbackIndicator();
+                quizFeedback.textContent = `Falsch. Die richtige Antwort war: ${questionData.options[correctAnswer]}`;
+                quizFeedback.classList.add('feedback-incorrect');
+            }
+
+            document.querySelectorAll('.quiz-options input[type="radio"]').forEach(input => input.disabled = true);
+            document.querySelectorAll('.quiz-options label').forEach(label => label.style.cursor = 'default');
+
+            quizAnswerChecked = true;
+            quizSubmitButton.textContent = 'Nächste Frage';
+            quizSubmitButton.disabled = false;
+        }
+
+        function showQuizResults() {
+            hideQuiz();
+            quizResultsArea.innerHTML = `
+                <h3 class="text-lg font-semibold mb-2">Quiz beendet!</h3>
+                <p>Dein Ergebnis: ${quizScore} von ${quizQuestions.length} Fragen richtig beantwortet.</p>
+            `;
+            quizResultsArea.style.display = 'block';
+        }
+
+        function handleQuizSubmit() {
+            if (!quizAnswerChecked) {
+                checkQuizAnswer();
+            } else {
+                currentQuizIndex++;
+                if (currentQuizIndex < quizQuestions.length) {
+                    displayQuizQuestion();
+                } else {
+                    showQuizResults();
+                }
             }
         }
 
-        function markCardStatus(status) {
-             if (cards.length === 0) return;
-             clearCardFeedbackIndicator();
-             flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat');
+        async function generateQuiz() {
+            clearError();
+            hideFlashcards();
+            hideQuiz();
 
-             cards[currentCardIndex].status = status;
-             updatePersistentStatusIcon(cards[currentCardIndex]);
-             saveProgress();
+            let fetchOptions = { method: 'POST' };
+            let requestPayload = {};
+            const numQuestions = parseInt(numQuestionsInput.value, 10) || 5;
 
-             cardFeedbackTimeout = setTimeout(() => {
-                 clearCardFeedbackIndicator();
-                 goToNextCard();
-             }, 400);
-        }
+            if (activeTab === 'text') {
+                const textData = textInput.value; if (!textData.trim()) { displayError("Bitte gib zuerst Text ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'text', textData: textData, numQuestions: numQuestions }; fetchOptions.body = JSON.stringify(requestPayload);
+            } else if (activeTab === 'file') {
+                const file = fileInput.files[0]; if (!file) { displayError("Bitte wähle zuerst eine Datei aus."); return; } const formData = new FormData(); formData.append('inputType', 'file'); formData.append('inputFile', file); formData.append('numQuestions', numQuestions); fetchOptions.body = formData;
+            } else if (activeTab === 'url') {
+                const urlData = urlInput.value; if (!urlData.trim() || !urlData.startsWith('http')) { displayError("Bitte gib zuerst eine gültige URL ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'url', urlData: urlData, numQuestions: numQuestions }; fetchOptions.body = JSON.stringify(requestPayload);
+            } else { displayError("Unbekannter Eingabe-Tab."); return; }
 
-        function shuffleCards() {
-            if (cards.length < 2) return;
-            console.log("Shuffling cards...");
-            for (let i = cards.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [cards[i], cards[j]] = [cards[j], cards[i]];
+            loadingText.textContent = 'Generiere Quiz...';
+            loadingIndicator.style.display = 'block';
+            generateQuizButton.disabled = true;
+            generateButton.disabled = true;
+            quizQuestions = [];
+            currentQuizIndex = 0;
+            quizScore = 0;
+
+            console.log(`Sending request to: ${BACKEND_URL_QUIZ}`);
+             if (fetchOptions.body instanceof FormData) { console.log('Request FormData includes:'); for (let [key, value] of fetchOptions.body.entries()) { if (value instanceof File) { console.log(`  ${key}: ${value.name}`); } else { console.log(`  ${key}: ${value}`); } } } else { console.log('Request body:', fetchOptions.body); }
+
+            try {
+                const response = await fetch(BACKEND_URL_QUIZ, fetchOptions);
+                console.log(`Quiz Response status: ${response.status} ${response.statusText}`);
+                if (!response.ok) { let errorMsg = `Fehler vom Server (Quiz): ${response.status} ${response.statusText}`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
+                const data = await response.json();
+                console.log('Quiz Data received:', data);
+                if (data.quiz && Array.isArray(data.quiz) && data.quiz.length > 0) {
+                    quizQuestions = data.quiz;
+                    currentQuizIndex = 0;
+                    quizScore = 0;
+                    currentMode = 'quiz';
+                    displayQuizQuestion();
+                } else { quizQuestions = []; displayError("Konnte keine Quizfragen generieren oder die Antwort war leer."); }
+            } catch (error) {
+                console.error("Fehler beim Generieren des Quiz:", error);
+                displayError(`Fehler: ${error.message}. Läuft der Backend-Server?`);
+                quizQuestions = [];
+                hideQuiz();
+            } finally {
+                loadingIndicator.style.display = 'none';
+                generateQuizButton.disabled = false;
+                generateButton.disabled = false;
             }
-            console.log("Cards shuffled.");
-            displayCard(0);
-        }
-
-        function resetCurrentProgress() {
-            if (!currentSourceIdentifier || cards.length === 0) return;
-            const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier;
-            localStorage.removeItem(key);
-            cards.forEach(card => delete card.status);
-            console.log(`Progress reset for source: ${currentSourceIdentifier}`);
-            displayCard(currentCardIndex);
         }
 
 
         // --- Event Listeners ---
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => { switchTab(button.dataset.tab); });
-        });
+        // Check if tabButtons exists before adding listeners
+        if (tabButtons && tabButtons.length > 0) {
+             tabButtons.forEach(button => {
+                 button.addEventListener('click', () => { switchTab(button.dataset.tab); });
+             });
+        } else {
+             console.error("Could not find tab buttons on initialization.");
+        }
+
 
         generateButton.addEventListener('click', async () => {
             clearError();
+            hideQuiz();
+
             let fetchOptions = { method: 'POST' };
             let requestPayload = {};
             const maxCards = parseInt(maxCardsInput.value, 10) || 10;
             let sourceName = `text_input_temp`;
 
-            if (activeTab === 'text') {
-                const textData = textInput.value;
-                if (!textData.trim()) { displayError("Bitte gib Text ein."); return; }
-                fetchOptions.headers = { 'Content-Type': 'application/json' };
-                requestPayload = { inputType: 'text', textData: textData, maxCards: maxCards };
-                fetchOptions.body = JSON.stringify(requestPayload);
-                sourceName = `text_${simpleHash(textData.substring(0, 200))}`;
-            } else if (activeTab === 'file') {
-                const file = fileInput.files[0];
-                if (!file) { displayError("Bitte wähle eine Datei aus."); return; }
-                const formData = new FormData();
-                formData.append('inputType', 'file');
-                formData.append('inputFile', file);
-                formData.append('maxCards', maxCards);
-                fetchOptions.body = formData;
-                sourceName = `file_${file.name}_${file.size}`;
-            } else if (activeTab === 'url') {
-                const urlData = urlInput.value;
-                if (!urlData.trim() || !urlData.startsWith('http')) { displayError("Bitte gib eine gültige URL ein."); return; }
-                fetchOptions.headers = { 'Content-Type': 'application/json' };
-                requestPayload = { inputType: 'url', urlData: urlData, maxCards: maxCards };
-                fetchOptions.body = JSON.stringify(requestPayload);
-                sourceName = `url_${simpleHash(urlData)}`;
+            if (activeTab === 'text') { const textData = textInput.value; if (!textData.trim()) { displayError("Bitte gib Text ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'text', textData: textData, maxCards: maxCards }; fetchOptions.body = JSON.stringify(requestPayload); sourceName = `text_${simpleHash(textData.substring(0, 200))}`;
+            } else if (activeTab === 'file') { const file = fileInput.files[0]; if (!file) { displayError("Bitte wähle eine Datei aus."); return; } const formData = new FormData(); formData.append('inputType', 'file'); formData.append('inputFile', file); formData.append('maxCards', maxCards); fetchOptions.body = formData; sourceName = `file_${file.name}_${file.size}`;
+            } else if (activeTab === 'url') { const urlData = urlInput.value; if (!urlData.trim() || !urlData.startsWith('http')) { displayError("Bitte gib eine gültige URL ein."); return; } fetchOptions.headers = { 'Content-Type': 'application/json' }; requestPayload = { inputType: 'url', urlData: urlData, maxCards: maxCards }; fetchOptions.body = JSON.stringify(requestPayload); sourceName = `url_${simpleHash(urlData)}`;
             }
             currentSourceIdentifier = sourceName;
 
+            loadingText.textContent = 'Generiere Lernkarten...';
             loadingIndicator.style.display = 'block';
             aiNotice.style.display = 'none';
-            flashcardArea.style.display = 'none';
-            noCardsMessage.style.display = 'none';
             generateButton.disabled = true;
+            generateQuizButton.disabled = true;
             cards = [];
             currentCardIndex = 0;
 
-            console.log(`Sending request to: ${BACKEND_URL} for source: ${currentSourceIdentifier}`);
-            if (fetchOptions.body instanceof FormData) {
-                 console.log('Request FormData includes:');
-                 for (let [key, value] of fetchOptions.body.entries()) {
-                     if (value instanceof File) { console.log(`  ${key}: ${value.name}`); }
-                     else { console.log(`  ${key}: ${value}`); }
-                 }
-             } else { console.log('Request body:', fetchOptions.body); }
+            console.log(`Sending request to: ${BACKEND_URL_FLASHCARDS} for source: ${currentSourceIdentifier}`);
+            if (fetchOptions.body instanceof FormData) { console.log('Request FormData includes:'); for (let [key, value] of fetchOptions.body.entries()) { if (value instanceof File) { console.log(`  ${key}: ${value.name}`); } else { console.log(`  ${key}: ${value}`); } } } else { console.log('Request body:', fetchOptions.body); }
 
             try {
-                const response = await fetch(BACKEND_URL, fetchOptions);
-                console.log(`Response status: ${response.status} ${response.statusText}`);
-                if (!response.ok) {
-                    let errorMsg = `Fehler vom Server: ${response.status} ${response.statusText}`;
-                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
-                    throw new Error(errorMsg);
-                }
+                const response = await fetch(BACKEND_URL_FLASHCARDS, fetchOptions);
+                console.log(`Flashcard Response status: ${response.status} ${response.statusText}`);
+                if (!response.ok) { let errorMsg = `Fehler vom Server: ${response.status} ${response.statusText}`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
                 const data = await response.json();
-                console.log('Data received:', data);
-                if (data.flashcards && Array.isArray(data.flashcards)) {
-                    cards = data.flashcards.map((card, index) => ({
-                        ...card,
-                        id: `card_${index}`
-                    }));
+                console.log('Flashcard Data received:', data);
+                if (data.flashcards && Array.isArray(data.flashcards) && data.flashcards.length > 0) {
+                    cards = data.flashcards.map((card, index) => ({ ...card, id: `card_${index}` }));
                     loadProgress();
                     currentCardIndex = 0;
                     isCardFlipped = false;
-                    aiNotice.style.display = 'block';
+                    currentMode = 'flashcards';
                     displayCard();
-                } else { throw new Error("Ungültige Antwort vom Server."); }
+                    aiNotice.style.display = 'block';
+                } else { cards = []; displayError("Konnte keine Lernkarten generieren oder die Antwort war leer."); }
             } catch (error) {
-                console.error("Fehler:", error);
+                console.error("Fehler beim Generieren der Lernkarten:", error);
                 displayError(`Fehler: ${error.message}. Läuft der Backend-Server?`);
                 cards = [];
-                displayCard();
+                hideFlashcards();
             } finally {
                 loadingIndicator.style.display = 'none';
                 generateButton.disabled = false;
+                generateQuizButton.disabled = false;
                 updateNavigation();
             }
         });
 
+        generateQuizButton.addEventListener('click', generateQuiz);
         flashcardContainer.addEventListener('click', flipCard);
         prevButton.addEventListener('click', () => { if (currentCardIndex > 0) { currentCardIndex--; displayCard(); } });
         nextButton.addEventListener('click', goToNextCard);
@@ -583,15 +569,18 @@
         repeatButton.addEventListener('click', () => markCardStatus('repeat'));
         shuffleButton.addEventListener('click', shuffleCards);
         resetProgressButton.addEventListener('click', resetCurrentProgress);
-
+        quizSubmitButton.addEventListener('click', handleQuizSubmit);
 
         // --- Initial State ---
+        // Initialize the first tab correctly after DOM is loaded
         switchTab('text-input-area');
-        flashcardArea.style.display = 'none';
-        noCardsMessage.style.display = 'none';
+        hideFlashcards();
+        hideQuiz();
         loadingIndicator.style.display = 'none';
         aiNotice.style.display = 'none';
         clearError();
+
+      }); // End of DOMContentLoaded listener
     </script>
 
 </body>
