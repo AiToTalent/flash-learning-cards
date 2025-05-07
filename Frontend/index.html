@@ -13,15 +13,55 @@
             background-image: linear-gradient(to top, #f3e8ff, #e9d5ff);
         }
 
-        /* Flashcard styles */
-        .flashcard-container { perspective: 1000px; min-height: 250px; position: relative; transition: box-shadow 0.3s ease-in-out; }
+        /* Custom styles for flashcard flip */
+        .flashcard-container {
+            perspective: 1000px;
+            min-height: 250px;
+            position: relative;
+            transition: box-shadow 0.3s ease-in-out;
+            width: 100%; /* Ensure container takes full width */
+            height: 288px; /* Fixed height (h-72) - adjust if needed */
+            margin-bottom: 1.25rem; /* mb-5 */
+            border-radius: 0.75rem; /* rounded-xl */
+        }
+        /* Feedback Status indicator styles */
         .flashcard-container.feedback-known { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); }
         .flashcard-container.feedback-repeat { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); }
-        .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1); cursor: pointer; }
+
+        .flashcard {
+            width: 100%;
+            height: 100%; /* Make flashcard fill the container */
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1);
+            cursor: pointer;
+        }
         .flashcard.is-flipped { transform: rotateY(180deg); }
-        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); font-family: 'Inter', sans-serif; text-align: center; border: 1px solid rgba(0,0,0,0.05); position: relative; }
+
+        .flashcard-face {
+            position: absolute; /* Keep absolute positioning */
+            width: 100%;
+            height: 100%; /* Make faces fill the card */
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.05);
+            /* Ensure text is contained */
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            hyphens: auto;
+        }
         .flashcard-front { background-color: #ffffff; color: #1f2937; }
         .flashcard-back { background-color: #f5f3ff; color: #5b21b6; transform: rotateY(180deg); }
+
+        /* Status Icon */
         .status-icon { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: white; z-index: 10; }
         .status-icon-known { background-color: rgba(34, 197, 94, 0.8); }
         .status-icon-repeat { background-color: rgba(239, 68, 68, 0.8); }
@@ -49,7 +89,7 @@
         /* Quiz Area Styles */
         #quiz-area { border: 1px dashed #cbd5e1; padding: 1.5rem; border-radius: 0.75rem; margin-top: 1.5rem; background-color: #fafafa; }
         .quiz-question { font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem; color: #1f2937; }
-        .quiz-options label { display: flex; align-items: center; background-color: white; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; position: relative; /* For missed indicator */ }
+        .quiz-options label { display: flex; align-items: center; background-color: white; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; position: relative; }
         .quiz-options label:hover { background-color: #f9fafb; border-color: #a5b4fc; }
         .quiz-options input[type="checkbox"] { margin-right: 0.75rem; width: 1rem; height: 1rem; accent-color: #4f46e5; cursor: pointer; }
         .quiz-options label.correct { border-color: #22c55e; background-color: #f0fdf4; }
@@ -125,7 +165,7 @@
 
         <div id="flashcard-area" class="mb-6" style="display: none;">
             <p class="text-center text-sm text-gray-500 mb-3">Klicke auf die Karte, um sie umzudrehen.</p>
-            <div id="flashcard-container" class="flashcard-container w-full h-64 md:h-72 mx-auto mb-5 rounded-xl">
+            <div id="flashcard-container" class="flashcard-container w-full mx-auto rounded-xl">
                 <div id="flashcard" class="flashcard">
                     <div class="flashcard-face flashcard-front text-lg md:text-xl">
                         <div id="card-status-icon-front" class="status-icon" style="display: none;"></div>
@@ -263,7 +303,36 @@
 
         // --- Flashcard Specific Functions ---
         function hideFlashcards() { flashcardArea.style.display = 'none'; noCardsMessage.style.display = 'none'; }
-        function displayCard(index = currentCardIndex) { hideQuiz(); clearCardFeedbackIndicator(); if (index < 0 || index >= cards.length) index = 0; currentCardIndex = index; if (cards.length === 0) { hideFlashcards(); noCardsMessage.style.display = 'block'; updatePersistentStatusIcon(null); updateNavigation(); return; } noCardsMessage.style.display = 'none'; flashcardArea.style.display = 'block'; const card = cards[currentCardIndex]; cardFrontText.textContent = card.front; cardBackText.textContent = card.back; updatePersistentStatusIcon(card); if (isCardFlipped) { flashcard.classList.remove('is-flipped'); isCardFlipped = false; } updateNavigation(); }
+        function displayCard(index = currentCardIndex) {
+            hideQuiz();
+            clearCardFeedbackIndicator();
+            if (index < 0 || index >= cards.length) index = 0;
+            currentCardIndex = index;
+
+            if (cards.length === 0) {
+                hideFlashcards();
+                noCardsMessage.style.display = 'block';
+                updatePersistentStatusIcon(null);
+                updateNavigation();
+                return;
+            }
+
+            noCardsMessage.style.display = 'none';
+            flashcardArea.style.display = 'block';
+
+            const card = cards[currentCardIndex];
+            // --- FIX: Ensure text content is set ---
+            cardFrontText.textContent = card.front || 'Fehler: Frage fehlt'; // Fallback text
+            cardBackText.textContent = card.back || 'Fehler: Antwort fehlt'; // Fallback text
+            // --- END FIX ---
+            updatePersistentStatusIcon(card);
+
+            if (isCardFlipped) {
+                flashcard.classList.remove('is-flipped');
+                isCardFlipped = false;
+            }
+            updateNavigation();
+        }
         function updateNavigation() { const hasCards = cards.length > 0; const hasMultipleCards = cards.length > 1; flashcardArea.style.display = (hasCards && currentMode === 'flashcards') ? 'block' : 'none'; noCardsMessage.style.display = (!hasCards && currentMode === 'flashcards') ? 'block' : 'none'; cardCounter.textContent = `Karte ${hasCards ? currentCardIndex + 1 : 0} / ${cards.length}`; prevButton.disabled = !hasCards || currentCardIndex === 0; nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1; knownButton.disabled = !hasCards; repeatButton.disabled = !hasCards; shuffleButton.disabled = !hasMultipleCards; resetProgressButton.disabled = !hasCards; }
         function flipCard() { if (cards.length === 0) return; isCardFlipped = !isCardFlipped; flashcard.classList.toggle('is-flipped', isCardFlipped); }
         function goToNextCard() { if (currentCardIndex < cards.length - 1) { currentCardIndex++; displayCard(); } else { console.log("End of cards reached."); clearCardFeedbackIndicator(); } }
@@ -397,39 +466,19 @@
             loadingText.textContent = 'Generiere Quiz...'; loadingIndicator.style.display = 'block'; generateQuizButton.disabled = true; generateButton.disabled = true; quizQuestions = []; currentQuizIndex = 0; quizScore = 0;
             console.log(`Sending request to: ${BACKEND_URL_QUIZ}`); if (fetchOptions.body instanceof FormData) { console.log('Request FormData includes:'); for (let [key, value] of fetchOptions.body.entries()) { if (value instanceof File) { console.log(`  ${key}: ${value.name}`); } else { console.log(`  ${key}: ${value}`); } } } else { console.log('Request body:', fetchOptions.body); }
             try {
-                // --- FIXED: Log the full URL being fetched ---
-                const fullUrl = BACKEND_URL_QUIZ;
-                console.log(`Fetching from URL: ${fullUrl}`);
-                const response = await fetch(fullUrl, fetchOptions);
-                // --- END OF FIX ---
+                const fullUrl = BACKEND_URL_QUIZ; console.log(`Fetching from URL: ${fullUrl}`); const response = await fetch(fullUrl, fetchOptions);
                 console.log(`Quiz Response status: ${response.status} ${response.statusText}`); if (!response.ok) { let errorMsg = `Fehler vom Server (Quiz): ${response.status} ${response.statusText}`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
                 const data = await response.json(); console.log('Quiz Data received:', data); if (data.quiz && Array.isArray(data.quiz) && data.quiz.length > 0) { quizQuestions = data.quiz; currentQuizIndex = 0; quizScore = 0; currentMode = 'quiz'; displayQuizQuestion(); }
                 else { quizQuestions = []; displayError("Konnte keine Quizfragen generieren oder die Antwort war leer."); }
             } catch (error) {
                 console.error("Fehler beim Generieren des Quiz:", error);
-                // --- UPDATED CATCH BLOCK ---
-                let displayMsg = "Unbekannter Fehler beim Generieren des Quiz."; // Default
-                // Check if error object exists and has a message property
-                if (error && typeof error.message === 'string' && error.message.length > 0) {
-                    displayMsg = error.message;
-                } else if (typeof error === 'string' && error.length > 0) { // Handle if error is just a string
-                    displayMsg = error;
-                } else {
-                    // Try to stringify the error if it's an object but has no message
-                    try {
-                         displayMsg = JSON.stringify(error);
-                         if (displayMsg === '{}') { // Avoid showing empty object
-                             displayMsg = "Unbekannter Fehler (leeres Fehlerobjekt).";
-                         }
-                    } catch (e) {
-                        displayMsg = "Unbekannter Fehler (konnte nicht verarbeitet werden).";
-                    }
-                }
+                let displayMsg = "Unbekannter Fehler beim Generieren des Quiz.";
+                if (error && typeof error.message === 'string' && error.message.length > 0) { displayMsg = error.message; }
+                else if (typeof error === 'string' && error.length > 0) { displayMsg = error; }
+                else { try { displayMsg = JSON.stringify(error); if (displayMsg === '{}') { displayMsg = "Unbekannter Fehler (leeres Fehlerobjekt)."; } } catch (e) { displayMsg = "Unbekannter Fehler (konnte nicht verarbeitet werden)."; } }
                 displayMsg += " Läuft der Backend-Server und ist er erreichbar?";
-                displayError(displayMsg); // Use the potentially improved message
-                // --- END OF UPDATE ---
-                quizQuestions = [];
-                hideQuiz();
+                displayError(displayMsg);
+                quizQuestions = []; hideQuiz();
             } finally { loadingIndicator.style.display = 'none'; generateQuizButton.disabled = false; generateButton.disabled = false; }
         }
 
@@ -443,11 +492,7 @@
             currentSourceIdentifier = sourceName; loadingText.textContent = 'Generiere Lernkarten...'; loadingIndicator.style.display = 'block'; aiNotice.style.display = 'none'; generateButton.disabled = true; generateQuizButton.disabled = true; cards = []; currentCardIndex = 0;
             console.log(`Sending request to: ${BACKEND_URL_FLASHCARDS} for source: ${currentSourceIdentifier}`); if (fetchOptions.body instanceof FormData) { console.log('Request FormData includes:'); for (let [key, value] of fetchOptions.body.entries()) { if (value instanceof File) { console.log(`  ${key}: ${value.name}`); } else { console.log(`  ${key}: ${value}`); } } } else { console.log('Request body:', fetchOptions.body); }
             try {
-                // --- FIXED: Log the full URL being fetched ---
-                const fullUrl = BACKEND_URL_FLASHCARDS;
-                console.log(`Fetching from URL: ${fullUrl}`);
-                const response = await fetch(fullUrl, fetchOptions);
-                // --- END OF FIX ---
+                const fullUrl = BACKEND_URL_FLASHCARDS; console.log(`Fetching from URL: ${fullUrl}`); const response = await fetch(fullUrl, fetchOptions);
                 console.log(`Flashcard Response status: ${response.status} ${response.statusText}`); if (!response.ok) { let errorMsg = `Fehler vom Server: ${response.status} ${response.statusText}`; try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {} throw new Error(errorMsg); }
                 const data = await response.json(); console.log('Flashcard Data received:', data); if (data.flashcards && Array.isArray(data.flashcards) && data.flashcards.length > 0) { cards = data.flashcards.map((card, index) => ({ ...card, id: `card_${index}` })); loadProgress(); currentCardIndex = 0; isCardFlipped = false; currentMode = 'flashcards'; displayCard(); aiNotice.style.display = 'block'; }
                 else { cards = []; displayError("Konnte keine Lernkarten generieren oder die Antwort war leer."); }
