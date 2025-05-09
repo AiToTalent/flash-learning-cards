@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KI Lernkarten & Quiz App (Punkte)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>KI Lernkarten & Quiz App (Gamification)</title> <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
@@ -13,56 +12,15 @@
             background-image: linear-gradient(to top, #f3e8ff, #e9d5ff);
         }
 
-        /* Custom styles for flashcard flip */
-        .flashcard-container {
-            perspective: 1000px;
-            min-height: 288px; /* Set min-height matching the desired card height (h-72) */
-            height: 288px; /* Explicit height for the container */
-            position: relative;
-            transition: box-shadow 0.3s ease-in-out;
-            width: 100%;
-            margin-bottom: 1.25rem; /* mb-5 */
-            border-radius: 0.75rem; /* rounded-xl */
-        }
-        /* Feedback Status indicator styles */
+        /* Flashcard styles */
+        .flashcard-container { perspective: 1000px; min-height: 288px; height: 288px; position: relative; transition: box-shadow 0.3s ease-in-out; width: 100%; margin-bottom: 1.25rem; border-radius: 0.75rem; }
         .flashcard-container.feedback-known { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.6); }
         .flashcard-container.feedback-repeat { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.6); }
-
-        .flashcard {
-            width: 100%;
-            height: 100%; /* Let the card fill the container */
-            position: absolute; /* Position card absolutely within container */
-            top: 0;
-            left: 0;
-            transform-style: preserve-3d;
-            transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1);
-            cursor: pointer;
-        }
+        .flashcard { width: 100%; height: 100%; position: absolute; top: 0; left: 0; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1); cursor: pointer; }
         .flashcard.is-flipped { transform: rotateY(180deg); }
-
-        .flashcard-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            border-radius: 0.75rem; /* rounded-xl */
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            font-family: 'Inter', sans-serif;
-            text-align: center;
-            border: 1px solid rgba(0,0,0,0.05);
-            overflow-wrap: break-word;
-            word-wrap: break-word;
-            hyphens: auto;
-        }
+        .flashcard-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); font-family: 'Inter', sans-serif; text-align: center; border: 1px solid rgba(0,0,0,0.05); position: relative; overflow-wrap: break-word; word-wrap: break-word; hyphens: auto; }
         .flashcard-front { background-color: #ffffff; color: #1f2937; }
         .flashcard-back { background-color: #f5f3ff; color: #5b21b6; transform: rotateY(180deg); }
-
-        /* Status Icon */
         .status-icon { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; color: white; z-index: 10; }
         .status-icon-known { background-color: rgba(34, 197, 94, 0.8); }
         .status-icon-repeat { background-color: rgba(239, 68, 68, 0.8); }
@@ -103,6 +61,28 @@
 
         /* Score display */
         .score-display { font-size: 0.9rem; font-weight: 500; color: #4b5563; background-color: #f3f4f6; padding: 0.3rem 0.8rem; border-radius: 9999px; border: 1px solid #e5e7eb; }
+
+        /* NEW: Progress Bar Styles */
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e5e7eb; /* gray-200 */
+            border-radius: 0.375rem; /* rounded-md */
+            overflow: hidden;
+            margin-bottom: 1rem; /* Space below progress bar */
+            height: 1.25rem; /* h-5 */
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #4ade80; /* green-400 */
+            width: 0%; /* Initial width */
+            transition: width 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem; /* text-xs */
+            color: #14532d; /* green-900 */
+            font-weight: 500;
+        }
 
     </style>
 </head>
@@ -169,6 +149,9 @@
 
 
         <div id="flashcard-area" class="mb-6" style="display: none;">
+            <div id="flashcard-progress-bar-container" class="progress-bar-container">
+                <div id="flashcard-progress-bar-fill" class="progress-bar-fill">0%</div>
+            </div>
             <p class="text-center text-sm text-gray-500 mb-3">Klicke auf die Karte, um sie umzudrehen.</p>
             <div id="flashcard-container" class="flashcard-container w-full mx-auto rounded-xl">
                 <div id="flashcard" class="flashcard">
@@ -235,6 +218,12 @@
       document.addEventListener('DOMContentLoaded', () => {
 
         // --- DOM Elements ---
+        // ... (alle bisherigen DOM-Elemente bleiben gleich)
+        const scoreDisplay = document.getElementById('score-display');
+        // NEW: Progress Bar Elements
+        const flashcardProgressBarContainer = document.getElementById('flashcard-progress-bar-container');
+        const flashcardProgressBarFill = document.getElementById('flashcard-progress-bar-fill');
+        // (Rest der DOM-Elemente wie zuvor)
         const textInput = document.getElementById('text-input');
         const fileInput = document.getElementById('file-input');
         const urlInput = document.getElementById('url-input');
@@ -245,7 +234,6 @@
         const aiNotice = document.getElementById('ai-notice');
         const errorArea = document.getElementById('error-area');
         const errorMessage = document.getElementById('error-message');
-        // Flashcard Elements
         const flashcardArea = document.getElementById('flashcard-area');
         const flashcardContainer = document.getElementById('flashcard-container');
         const flashcard = document.getElementById('flashcard');
@@ -263,7 +251,6 @@
         const shuffleButton = document.getElementById('shuffle-button');
         const resetProgressButton = document.getElementById('reset-progress-button');
         const maxCardsInput = document.getElementById('max-cards-input');
-        // Quiz Elements
         const numQuestionsInput = document.getElementById('num-questions-input');
         const quizArea = document.getElementById('quiz-area');
         const quizContent = document.getElementById('quiz-content');
@@ -273,8 +260,6 @@
         const noQuizMessage = document.getElementById('no-quiz-message');
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-content');
-        // Score Element
-        const scoreDisplay = document.getElementById('score-display');
 
 
         // --- Configuration ---
@@ -312,19 +297,34 @@
         function switchTab(tabId) { activeTab = tabId.split('-')[0]; if (tabButtons && tabButtons.length > 0) { tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabId)); } if (tabContents && tabContents.length > 0) { tabContents.forEach(content => content.classList.toggle('active', content.id === tabId)); } clearError(); hideFlashcards(); hideQuiz(); }
         function clearCardFeedbackIndicator() { if (cardFeedbackTimeout) clearTimeout(cardFeedbackTimeout); flashcardContainer.classList.remove('feedback-known', 'feedback-repeat'); }
         function simpleHash(str) { let hash = 0; for (let i = 0; i < str.length; i++) { const char = str.charCodeAt(i); hash = ((hash << 5) - hash) + char; hash |= 0; } return Math.abs(hash).toString(36); }
-        function loadProgress() { if (!currentSourceIdentifier) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const savedProgress = localStorage.getItem(key); if (savedProgress) { const progressData = JSON.parse(savedProgress); cards.forEach(card => { if (progressData[card.id]) { card.status = progressData[card.id]; } }); } }
-        function saveProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const progressToSave = {}; cards.forEach(card => { if (card.status) { progressToSave[card.id] = card.status; } }); if (Object.keys(progressToSave).length > 0) { localStorage.setItem(key, JSON.stringify(progressToSave)); } else { localStorage.removeItem(key); } }
+        function loadProgress() { if (!currentSourceIdentifier) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const savedProgress = localStorage.getItem(key); if (savedProgress) { const progressData = JSON.parse(savedProgress); cards.forEach(card => { if (progressData[card.id]) { card.status = progressData[card.id]; } }); } updateFlashcardProgressBar(); } // Call progress bar update
+        function saveProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; const progressToSave = {}; cards.forEach(card => { if (card.status) { progressToSave[card.id] = card.status; } }); if (Object.keys(progressToSave).length > 0) { localStorage.setItem(key, JSON.stringify(progressToSave)); } else { localStorage.removeItem(key); } updateFlashcardProgressBar(); } // Call progress bar update
         function updatePersistentStatusIcon(card) { [cardStatusIconFront, cardStatusIconBack].forEach(iconEl => { iconEl.style.display = 'none'; iconEl.className = 'status-icon'; if (card && card.status) { iconEl.style.display = 'flex'; if (card.status === 'known') { iconEl.classList.add('status-icon-known'); iconEl.textContent = '✓'; } else if (card.status === 'repeat') { iconEl.classList.add('status-icon-repeat'); iconEl.textContent = '✕'; } } }); }
 
+        // NEW: Function to update the flashcard progress bar
+        function updateFlashcardProgressBar() {
+            if (!flashcardProgressBarFill || cards.length === 0) {
+                if(flashcardProgressBarContainer) flashcardProgressBarContainer.style.display = 'none';
+                return;
+            }
+            if(flashcardProgressBarContainer) flashcardProgressBarContainer.style.display = 'block';
+
+            const knownCards = cards.filter(card => card.status === 'known').length;
+            const progressPercentage = (knownCards / cards.length) * 100;
+            flashcardProgressBarFill.style.width = `${progressPercentage}%`;
+            flashcardProgressBarFill.textContent = `${Math.round(progressPercentage)}%`;
+        }
+
+
         // --- Flashcard Specific Functions ---
-        function hideFlashcards() { flashcardArea.style.display = 'none'; noCardsMessage.style.display = 'none'; }
-        function displayCard(index = currentCardIndex) { hideQuiz(); clearCardFeedbackIndicator(); if (index < 0 || index >= cards.length) index = 0; currentCardIndex = index; if (cards.length === 0) { hideFlashcards(); noCardsMessage.style.display = 'block'; updatePersistentStatusIcon(null); updateNavigation(); return; } noCardsMessage.style.display = 'none'; flashcardArea.style.display = 'block'; const card = cards[currentCardIndex]; cardFrontText.textContent = card.front || 'Fehler: Frage fehlt'; cardBackText.textContent = card.back || 'Fehler: Antwort fehlt'; updatePersistentStatusIcon(card); if (isCardFlipped) { flashcard.classList.remove('is-flipped'); isCardFlipped = false; } updateNavigation(); }
+        function hideFlashcards() { flashcardArea.style.display = 'none'; noCardsMessage.style.display = 'none'; if(flashcardProgressBarContainer) flashcardProgressBarContainer.style.display = 'none'; }
+        function displayCard(index = currentCardIndex) { hideQuiz(); clearCardFeedbackIndicator(); if (index < 0 || index >= cards.length) index = 0; currentCardIndex = index; if (cards.length === 0) { hideFlashcards(); noCardsMessage.style.display = 'block'; updatePersistentStatusIcon(null); updateNavigation(); updateFlashcardProgressBar(); return; } noCardsMessage.style.display = 'none'; flashcardArea.style.display = 'block'; const card = cards[currentCardIndex]; cardFrontText.textContent = card.front || 'Fehler: Frage fehlt'; cardBackText.textContent = card.back || 'Fehler: Antwort fehlt'; updatePersistentStatusIcon(card); if (isCardFlipped) { flashcard.classList.remove('is-flipped'); isCardFlipped = false; } updateNavigation(); updateFlashcardProgressBar(); }
         function updateNavigation() { const hasCards = cards.length > 0; const hasMultipleCards = cards.length > 1; flashcardArea.style.display = (hasCards && currentMode === 'flashcards') ? 'block' : 'none'; noCardsMessage.style.display = (!hasCards && currentMode === 'flashcards') ? 'block' : 'none'; cardCounter.textContent = `Karte ${hasCards ? currentCardIndex + 1 : 0} / ${cards.length}`; prevButton.disabled = !hasCards || currentCardIndex === 0; nextButton.disabled = !hasCards || currentCardIndex === cards.length - 1; knownButton.disabled = !hasCards; repeatButton.disabled = !hasCards; shuffleButton.disabled = !hasMultipleCards; resetProgressButton.disabled = !hasCards; }
         function flipCard() { if (cards.length === 0) return; isCardFlipped = !isCardFlipped; flashcard.classList.toggle('is-flipped', isCardFlipped); }
         function goToNextCard() { if (currentCardIndex < cards.length - 1) { currentCardIndex++; displayCard(); } else { console.log("End of cards reached."); clearCardFeedbackIndicator(); } }
-        function markCardStatus(status) { if (cards.length === 0) return; clearCardFeedbackIndicator(); flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat'); const previousStatus = cards[currentCardIndex].status; cards[currentCardIndex].status = status; if (status === 'known' && previousStatus !== 'known') { addScore(POINTS_CARD_KNOWN); } updatePersistentStatusIcon(cards[currentCardIndex]); saveProgress(); cardFeedbackTimeout = setTimeout(() => { clearCardFeedbackIndicator(); goToNextCard(); }, 400); }
+        function markCardStatus(status) { if (cards.length === 0) return; clearCardFeedbackIndicator(); flashcardContainer.classList.add(status === 'known' ? 'feedback-known' : 'feedback-repeat'); const previousStatus = cards[currentCardIndex].status; cards[currentCardIndex].status = status; if (status === 'known' && previousStatus !== 'known') { addScore(POINTS_CARD_KNOWN); } updatePersistentStatusIcon(cards[currentCardIndex]); saveProgress(); /* saveProgress calls updateFlashcardProgressBar */ cardFeedbackTimeout = setTimeout(() => { clearCardFeedbackIndicator(); goToNextCard(); }, 400); }
         function shuffleCards() { if (cards.length < 2) return; console.log("Shuffling cards..."); for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; } console.log("Cards shuffled."); displayCard(0); }
-        function resetCurrentProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; localStorage.removeItem(key); cards.forEach(card => delete card.status); console.log(`Progress reset for source: ${currentSourceIdentifier}`); displayCard(currentCardIndex); }
+        function resetCurrentProgress() { if (!currentSourceIdentifier || cards.length === 0) return; const key = LOCAL_STORAGE_KEY_PREFIX + currentSourceIdentifier; localStorage.removeItem(key); cards.forEach(card => delete card.status); console.log(`Progress reset for source: ${currentSourceIdentifier}`); displayCard(currentCardIndex); /* displayCard calls updateFlashcardProgressBar */ }
 
         // --- Quiz Specific Functions ---
         function hideQuiz() { quizArea.style.display = 'none'; noQuizMessage.style.display = 'none'; quizFeedback.style.display = 'none'; quizResultsArea.style.display = 'none'; }
@@ -397,7 +397,7 @@
         quizSubmitButton.addEventListener('click', handleQuizSubmit);
 
         // --- Initial State ---
-        loadTotalScore(); // Load score when the app starts
+        loadTotalScore();
         switchTab('text-input-area');
         hideFlashcards();
         hideQuiz();
@@ -405,7 +405,7 @@
         aiNotice.style.display = 'none';
         clearError();
 
-      }); // End of DOMContentLoaded listener
+      });
     </script>
 
 </body>
